@@ -6,7 +6,9 @@ this is a pre-release version, I have to write a manual.
 
 tested very successfully in Debian and OpenBSD.
 
-Distributed under the GNU Public License (please be gentle).
+compile with make or ./build
 
 contact giorgossaridakis@gmail.com
+
+Distributed under the GNU Public License (please be gentle).
 

@@ -1,0 +1,2 @@
+#!/bin/sh
+cc -o cchatd screen.c ansi.c command.c socket.c socklib.c parser.c cchatd.c -lncurses

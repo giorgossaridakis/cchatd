@@ -331,6 +331,7 @@ void nextline()
 void showscreen()
 {
   int i, tx;
+  const int BARROW=23;
   
    tx=40-(strlen(title)/2);
    color(BLUE);
@@ -345,24 +346,24 @@ void showscreen()
     addch(SPACE);
    attributes(NORMAL);
    color(CYANONBLACK);
-   gotoxy(1, 23);
+   gotoxy(1, BARROW);
    for (i=0;i<80;i++)
     addch(ACS_HLINE);
    if ( comms == 0 ) {
     // channel name
     color(YELLOW);
-    gotoxy(3, 23);
+    gotoxy(3, BARROW);
     printw("[ch:%.10s]", channels[connections[CONSOLEID].channel].name);
     // locked or not
     if ( channels[connections[CONSOLEID].channel].locked == OFF ) {
-     gotoxy(19, 23);
+     gotoxy(19, BARROW);
      color(BLUE);
      attributes(DIM);
      printw("[ locked]");
      attributes(NORMAL);
     }
     if ( channels[connections[CONSOLEID].channel].locked == ON ) {
-     gotoxy(19, 23);
+     gotoxy(19, BARROW);
      color(BLUE);
      addch('[');
      attributes(BLINK);
@@ -374,14 +375,14 @@ void showscreen()
     // muted server or not
     if ( muteserver == OFF ) {
      color(RED);
-     gotoxy(29, 23);
+     gotoxy(29, BARROW);
      attributes(DIM);
      printw("[ mute]");
      attributes(NORMAL);
     }
     if ( muteserver == ON ) {
      color(RED);
-     gotoxy(29, 23);
+     gotoxy(29, BARROW);
      addch('[');
      attributes(BLINK);
      addch('*');
@@ -393,14 +394,14 @@ void showscreen()
     // connected to out socket or not
     if ( outconnections[connections[CONSOLEID].channel].fd == -1 ) {
      color(GREEN);
-     gotoxy(37, 23);
+     gotoxy(37, BARROW);
      attributes(DIM);
      printw("[ telnet]");
      attributes(NORMAL);
     }
     if ( outconnections[connections[CONSOLEID].channel].fd > -1 ) {
      color(GREEN);
-     gotoxy(37, 23);
+     gotoxy(37, BARROW);
      addch('[');
      attributes(BLINK);
      addch('*');
@@ -409,44 +410,49 @@ void showscreen()
      printw("telnet]");
     }
     color(MAGENTA);
-    gotoxy(47, 23);
+    gotoxy(47, BARROW);
     printw("[users:%d * total us/ch:%d/%d]", channelusers(connections[CONSOLEID].channel), nousers(), nochannels() );
    }
    if ( comms == 1 ) {
-    // connected to out socket or not
-    if ( outconnections[connections[CONSOLEID].channel].fd == -1 ) {
-     color(GREEN);
-     gotoxy(65, 23);
-     attributes(DIM);
-     printw("[ connnection]"); 
-     attributes(NORMAL);
-    }
-    if ( outconnections[connections[CONSOLEID].channel].fd > -1 ) {
-     color(GREEN);
-     gotoxy(65, 23);
-     addch('[');
-     attributes(BLINK);
-     addch('*');
-     attributes(NORMAL);
-     color(GREEN);
-     printw("connnection]");
-    }
+    // channel name
+    color(YELLOW);
+    gotoxy(48, BARROW);
+    printw("[ch:%s]", channels[connections[CONSOLEID].channel].name);
+    // keeping log or not
     if ( loglevel == NONE ) {
      color(MAGENTA);
-     gotoxy(58, 23);
+     gotoxy(58, BARROW);
      attributes(DIM);
      printw("[ log]"); 
      attributes(NORMAL);
     }       
     if ( loglevel == FULL ) {
      color(MAGENTA);
-     gotoxy(58, 23);
+     gotoxy(58, BARROW);
      addch('[');
      attributes(BLINK);
      addch('*');
      attributes(NORMAL);
      color(MAGENTA);
      printw("log]");
+    }
+    // connected to out socket or not
+    if ( outconnections[connections[CONSOLEID].channel].fd == -1 ) {
+     color(GREEN);
+     gotoxy(65, BARROW);
+     attributes(DIM);
+     printw("[ connnection]"); 
+     attributes(NORMAL);
+    }
+    if ( outconnections[connections[CONSOLEID].channel].fd > -1 ) {
+     color(GREEN);
+     gotoxy(65, BARROW);
+     addch('[');
+     attributes(BLINK);
+     addch('*');
+     attributes(NORMAL);
+     color(GREEN);
+     printw("connnection]");
     }
    }
 

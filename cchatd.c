@@ -1,7 +1,7 @@
 // cchatd, multi chat server and client with ncurses
 #include "cchatd.h"
 
-const double VERSION=0.90;
+const double VERSION=0.93;
 
 int main(int argc, char *argv[])
 {
@@ -195,6 +195,7 @@ void initvariables()
     for (i=0;i<MAXCHANNELS;i++) {
      channels[i].active=OFF;
      channels[i].locked=OFF;
+     sprintf( channels[i].name, "%d", i ); 
      outconnections[i].fd=-1;
      outconnections[i].pipe=OFF;
     }
@@ -262,9 +263,15 @@ int readkeyboard(WINDOW *twin)
         
      // handle control keys
      if ( c == TAB ) { // next channel
-      for (i=(connections[CONSOLEID].channel < MAXCHANNELS-2) ? connections[CONSOLEID].channel+1 : 0;i!=connections[CONSOLEID].channel;i++) {
+      if ( comms == 1 ) {
+       if ( connections[CONSOLEID].channel < MAXCHANNELS - 2 )
+        channels[connections[CONSOLEID].channel + 1].active=ON;
+       if ( connections[CONSOLEID].channel != CONSOLEID && outconnections[connections[CONSOLEID].channel].fd == -1 )
+        channels[connections[CONSOLEID].channel].active=OFF;
+      }
+      for (i=(connections[CONSOLEID].channel < MAXCHANNELS-2) ? connections[CONSOLEID].channel+1 : CONSOLEID;i!=connections[CONSOLEID].channel;i++) {
        if ( i == MAXCHANNELS )
-        i=0;
+        i=CONSOLEID;
        if ( channels[i].active == ON )
         break;
       }
@@ -274,7 +281,15 @@ int readkeyboard(WINDOW *twin)
       }
      }
      if ( c == SHIFT_TAB ) { // previous channel
-      for (i=(connections[CONSOLEID].channel > 0) ? connections[CONSOLEID].channel-1 : MAXCHANNELS-1;i!=connections[CONSOLEID].channel;i--) {
+      if ( comms == 1 ) { 
+       if ( connections[CONSOLEID].channel > CONSOLEID + 1 )
+        channels[connections[CONSOLEID].channel - 1].active=ON;
+       if ( connections[CONSOLEID].channel == CONSOLEID )
+        channels[MAXCHANNELS-1].active=ON;
+       if ( connections[CONSOLEID].channel != CONSOLEID && outconnections[connections[CONSOLEID].channel].fd == -1 )
+        channels[connections[CONSOLEID].channel].active=OFF;
+      }
+      for (i=(connections[CONSOLEID].channel > CONSOLEID) ? connections[CONSOLEID].channel-1 : MAXCHANNELS-1;i!=connections[CONSOLEID].channel;i--) {
        if ( i == -1 )
         i=MAXCHANNELS-1;
        if ( channels[i].active == ON )
@@ -441,7 +456,7 @@ void outputtextfile(int connectionid, char *filename)
    return;
   
      stream = fopen(filename, "r");
-     if (stream == NULL)
+     if ( stream == NULL )
       return;
 
      while ( (nread = getline(&line, &len, stream)) != -1 ) {

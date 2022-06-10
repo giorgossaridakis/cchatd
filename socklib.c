@@ -43,6 +43,7 @@ enum { CLIENT = 1, SERVER };
 extern const char *HIDDENNAME;
 extern const char *NEWSFILE;
 typedef unsigned int ui;
+extern int comms;
 
 // global variables
 typedef struct {
@@ -110,9 +111,7 @@ void telluseransi(int connectionid, char *text, int num, ...);
 extern ui logaction(char *text, int level);
 extern void writeterminal(char *text, int c);
 extern size_t readfileentry(int fd, char *line);
-void outputtextfile(int connectionid, char *filename);
-
-
+extern void outputtextfile(int connectionid, char *filename);
 
 // add connection
 int addconnection()
@@ -135,6 +134,7 @@ int addconnection()
       break;
      // server busy or mutes
     if ( i == MAXCONNECTIONS || muteserver == ON ) {
+     write( fd_client, "this system is currently unavailable\r\n", 38 );
      disconnect(fd_client);   
      return 0;
     }
@@ -341,9 +341,8 @@ void listchannelusers(int connectionid, int flag) // 0 all users, 1 only to conn
 void dismisschannel(int connectionid)
 {
   int i;
-  char tline[MAXBUFFER];
     
-    if ( channelusers(connections[connectionid].channel) > 1 )
+    if ( channelusers(connections[connectionid].channel) > 1 || comms == 1 )
      return;
     // deactivate channel, if need be
     if ( (channelusers(connections[connectionid].channel) == 1) && connections[connectionid].channel != CONSOLEID ) {
@@ -358,11 +357,7 @@ void dismisschannel(int connectionid)
       if ( connections[i].invitation == connections[connectionid].channel )
        connections[i].invitation=0;
     }
-    // inform remaining users
-    sprintf(tline, "%s has left the channel", connections[connectionid].nickname);
-    for (i=0;i<MAXCONNECTIONS;i++)
-     if ( connections[i].active && connections[i].channel == connections[connectionid].channel && connectionid != i )
-      telluser(i, tline, GREEN);
+    
 }
 
 // tell user

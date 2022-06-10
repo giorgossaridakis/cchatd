@@ -133,10 +133,10 @@ ui fdcommands(char* command, int connectionid)
     tcommand[i]='\0';
   
     nwords=assignstringvaluestoarray(tcommand, words, MAXWORDS);
-    parsecommand(words, bwords, nwords, connectionid);
-    snprintf(tline, MAXBUFFER, "%s:", connections[connectionid].nickname);
+    snprintf(tline, MAXBUFFER, "%s->", connections[connectionid].nickname);
     strcat(tline, tcommand);
     logaction(tline, INCREASED);
+    parsecommand(words, bwords, nwords, connectionid);
     // clear buffers
     memset(command, 0, MAXBUFFER/2 );
     for (i=0;i<nwords;i++) 
@@ -156,8 +156,10 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
    for (i=0;i<26;i++)
     if ( !strcmp(words[0], COMMANDS[i]) )
      break;
-   if ( comms == 1 && i != OPEN && i != CLOSE && i != QUIT && i != LOG && i != HELP )
+   if ( comms == 1 && i != OPEN && i != CLOSE && i != QUIT && i != LOG && i != HELP ) {
+    telluser(connectionid, "unknown command", RED);
     return 0;
+   }
     
    // no command found
    if ( i == 26 ) {
@@ -182,7 +184,7 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      return 0;
     }
     if ( comms == 1 ) { // telnet client
-     telluser(CONSOLEID, "commands are: help (this help), open <server> <port>, close (connection), log <level>, quit [ console keys UP, DOWN, PG_UP, PG_DOWN ]", YELLOW);
+     telluser(CONSOLEID, "commands are: help (this help), open <server> <port>, close (connection), log <level>, quit [ console keys TAB, SHIFT_TAB, UP, DOWN, PG_UP, PG_DOWN ]", YELLOW);
      return 0;
     }
     strcpy(tline, "commands are: help (this help), nick <new nickname>, who, msg <nick> <message>, list (channels), join <channel>, leave (this channel), invite <nickname>, topic <channel topic>, lock (this channel), unlock (this channel), report <your report>, names (in this channel), quit");
@@ -600,12 +602,16 @@ void joinchannel(int connectionid, int nextchannel)
 {
   char tline[MAXBUFFER];  
     
-   sprintf(tline, "%s has left the channel", connections[connectionid].nickname);
-   tellchannelusers( tline, GREEN, connections[connectionid].channel, OFF );
+   if ( comms == 0 ) {
+    sprintf(tline, "%s has left the channel", connections[connectionid].nickname);
+    tellchannelusers( tline, GREEN, connections[connectionid].channel, OFF );
+   }
    dismisschannel(connectionid);
    connections[connectionid].channel=nextchannel;
-   sprintf(tline, "%s has joined %s", connections[connectionid].nickname, channels[nextchannel].name);
-   tellchannelusers( tline, GREEN, nextchannel, OFF );
-   listchannelusers(connectionid, 0);   
+   if ( comms == 0 ) {
+    sprintf(tline, "%s has joined %s", connections[connectionid].nickname, channels[nextchannel].name);
+    tellchannelusers( tline, GREEN, nextchannel, OFF );
+    listchannelusers(connectionid, 0);   
+   }
 }
     

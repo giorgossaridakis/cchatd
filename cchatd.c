@@ -1,7 +1,7 @@
 // cchatd, multi chat server and client with ncurses
 #include "cchatd.h"
 
-const double VERSION=0.93;
+const double VERSION=0.95;
 
 int main(int argc, char *argv[])
 {
@@ -120,6 +120,7 @@ int main(int argc, char *argv[])
     }
     
     // read listening sockets
+    ndisconnectedusers = 0;
     for (fd = 0; fd <= fd_hwm; fd++) {
      if (FD_ISSET(fd, &read_set)) {
       if ( fd == fd_skt ) {  // new connection
@@ -133,8 +134,9 @@ int main(int argc, char *argv[])
        memset( connections[whoisonfd].buffer, 0, CONNECTIONBUFFER );
        memset( buf, 0, MAXBUFFER/2 );
        nread = read( fd, buf, MAXBUFFER/2 );
-       if ( nread == 0 )
+       if ( nread == 0 ) {
         disconnect(fd);
+       }
        if ( nread ) {
         nbufflines=stringformattersplitter(buf, bufflines);
         for (i2=0;i2<nbufflines;i2++) {
@@ -162,6 +164,7 @@ int main(int argc, char *argv[])
       }
      }
     }
+    announcedisconnectedusers();
    
    }
 

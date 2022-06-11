@@ -156,23 +156,8 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
    for (i=0;i<26;i++)
     if ( !strcmp(words[0], COMMANDS[i]) )
      break;
-   if ( comms == 1 && i != OPEN && i != CLOSE && i != QUIT && i != LOG && i != HELP ) {
-    telluser(connectionid, "unknown command", RED);
-    return 0;
-   }
-    
-   // no command found
-   if ( i == 26 ) {
-    telluser(connectionid, "unknown command", RED);
-    return 0;
-   }
-   // operator command requested, user is not
-   if ( i > HIDE && connections[connectionid].operator == OFF ) {
-    telluser(connectionid, "unknown command", RED);
-    return 0;
-   }
-   // console command requested, user is not on it
-   if ( i > OP && connectionid != CONSOLEID ) {
+   // parse for errors in request
+   if ( ( comms == 1 && i != OPEN && i != CLOSE && i != QUIT && i != LOG && i != HELP ) || i == 26 || ( i > HIDE && connections[connectionid].operator == OFF ) || ( i > OP && connectionid != CONSOLEID ) ) {
     telluser(connectionid, "unknown command", RED);
     return 0;
    }

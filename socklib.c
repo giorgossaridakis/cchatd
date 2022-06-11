@@ -88,10 +88,12 @@ extern int serverport, fd_skt, fd_hwm;
 extern const char *ANSISEQUENCES[96];
 extern int COLORPAIRS[8][2];
 extern int BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE;
+extern int disconnectedusers[MAXCONNECTIONS], ndisconnectedusers;
 
 // function declarations
 int addconnection();
 void disconnect(int fd);
+void announcedisconnectedusers();
 void closeoutconnection(int connectionid);
 void announce(char *text, int c);
 void dismisschannel(int connectionid);
@@ -175,7 +177,6 @@ int addconnection()
 void disconnect(int fd)
 {
   int i;
-  char buf[MAXBUFFER];
     
      i=whoisfd(fd);
      telluser(i, "Goodbye!", RED);
@@ -187,14 +188,26 @@ void disconnect(int fd)
       close(fd);
       if ( muteserver == ON )
        return;
-      sprintf(buf, "[ %s ] from %s port %d has disconnected\r\n", connections[i].nickname, connections[i].ipaddress, connections[i].port);
-      logaction(buf, BASIC);
-      writeterminal(buf, GREEN);
-      connections[i].active=OFF;
+      disconnectedusers[ndisconnectedusers++]=i;
+      connections[i].active=INVISIBLE;
       connections[i].fd=-1;
-      for (i=1;i<MAXCONNECTIONS;i++)
-       if ( connections[i].active )
-        write( connections[i].fd, buf, strlen(buf) );
+}
+
+// announce disconnected users
+void announcedisconnectedusers()
+{
+  int i, i1;
+  char tline[MAXBUFFER];
+  
+   for (i=0;i<ndisconnectedusers;i++) {
+    sprintf(tline, "[ %s ] from %s port %d has disconnected", connections[disconnectedusers[i]].nickname, connections[disconnectedusers[i]].ipaddress, connections[disconnectedusers[i]].port);
+    logaction(tline, BASIC);
+    for (i1=0;i1<MAXCONNECTIONS;i1++)
+     if ( connections[i1].active )
+      telluser(i1, tline, GREEN);
+    connections[disconnectedusers[i]].active=OFF;
+   }
+   
 }
 
 // close outconnection

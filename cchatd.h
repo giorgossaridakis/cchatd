@@ -128,6 +128,7 @@ char* keyboardhistory[MAXHISTORY];
 int keyboardhistorypos=0, keyboardhistorysize=0;
 int terminalnl=ON;
 int bufpos;
+int disconnectedusers[MAXCONNECTIONS], ndisconnectedusers;
 // extern
 extern WINDOW *win1;
 extern Screen screen, *screens[MAXHISTORY];
@@ -173,6 +174,7 @@ extern char *ipaddress();
 //socklib.c 
 extern int addconnection();
 extern void disconnect(int fd);
+extern void announcedisconnectedusers();
 extern void closeoutconnection(int connectionid);
 extern void announce(char *text, int c);
 extern void dismisschannel(int connectionid);

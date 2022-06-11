@@ -1,0 +1,11 @@
+[0;1m[0;37m                           _           _      _ 
+                   ___ ___| |__   __ _| |_ __| |
+                  / __/ __| '_ \ / _` | __/ _` |
+                 | (_| (__| | | | (_| | || (_| |
+                  \___\___|_| |_|\__,_|\__\__,_|
+
+         [5;36m*Welcome* [0;0m[31mto our IRC type chat server/client
+[1;37mcchatd is a multipurpose telnet server and multi-client. It supports incoming tcp/ip sockets and numerous outgoing telnet sockets, all can be linked-piped together in different channels. Feel free to explore, use /report if anything.
+
+      [0;33m->spammers will be banned and bots will soon appear<-
+        -------------------------------------------------[0m

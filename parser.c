@@ -26,7 +26,7 @@ enum { NORMAL=0, STANDOUT, UNDERLINE, REVERSE, BLINK, DIM, BOLD, PROTECT, INVISI
 #define MAXINPUT 80
 #define MAXLINES 100
 #define CONSOLEID 0
-enum { HIDDEN = -1, OFF = 0, ON }; // for .active members
+enum { DEADLINK = - 2, HIDDEN = -1, OFF = 0, ON }; // for .active members
 extern const char *STATES[];
 enum { NONE = 1, BASIC, INCREASED, FULL }; // log levels
 extern const char *LOGLEVELS[];
@@ -256,7 +256,7 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
     telluser(connectionid, title, BLUE);
     telluser(connectionid, "----------------------------------------", BLUE);
     for (i1=0;i1<MAXCONNECTIONS;i1++) {
-     if ( connections[i1].active ) {
+     if ( connections[i1].active && connections[i1].active != DEADLINK ) {
       snprintf(tline, MAXBUFFER, "%s%sch:%s%sip:%s port:%d", (connections[i1].active == HIDDEN) ? HIDDENNAME : connections[i1].nickname, (connections[i1].operator == ON ) ? "[op] " : " " , channels[connections[i1].channel].name, (outconnections[connections[i1].channel].fd > -1) ? "* " : " ", (connections[i1].active == HIDDEN) ? HIDDENIP : connections[i1].ipaddress, (connections[i1].active == HIDDEN) ? 0 : connections[i1].port );
       telluser(connectionid, tline, CYAN);
      }
@@ -358,7 +358,7 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
     strcpy( channels[connections[connectionid].channel].topic, limitspaces(tline) );
     strcat(tline, "");
     for (i2=0;i2<MAXCONNECTIONS;i2++) {
-     if ( connections[i2].active && connections[i2].channel == connections[connectionid].channel ) {
+     if ( connections[i2].active && connections[i2].active != DEADLINK && connections[i2].channel == connections[connectionid].channel ) {
       telluser(i2, title, BLUE);
       telluser(i2, tline, CYAN);
      }
@@ -377,7 +377,7 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
     telluser(connectionid, title, BLUE);
     telluser(connectionid, "----------------------------------------", BLUE);
     for (i1=0;i1<MAXCHANNELS;i1++) {
-     if ( channels[i1].active == 1 ) {
+     if ( channels[i1].active == ON ) {
       sprintf( tline, "ch:%s%s%stopic:%s users:%d", channels[i1].name, (channels[i1].locked == 1 ) ? "[priv]" : "[pub]", (outconnections[i1].fd > -1) ? "* " : " ",  channels[i1].topic, channelusers(i1) );
       telluser(connectionid, tline, CYAN);
      }

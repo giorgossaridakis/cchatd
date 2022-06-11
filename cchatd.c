@@ -1,7 +1,7 @@
 // cchatd, multi chat server and client with ncurses
 #include "cchatd.h"
 
-const double VERSION=0.95;
+const double VERSION=0.96;
 
 int main(int argc, char *argv[])
 {
@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
       writeterminal(connections[CONSOLEID].buffer, YELLOW);
      // write to all open connections
      for (i=1;i<MAXCONNECTIONS;i++) { // 0 is reserved for console
-      if ( connections[i].active == ON && connections[i].channel == connections[CONSOLEID].channel ) {
+      if ( connections[i].active && connections[i].active != DEADLINK && connections[i].channel == connections[CONSOLEID].channel ) {
        telluser(i, connections[CONSOLEID].buffer, WHITE);
       }
      }
@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
           writeterminal(connections[whoisonfd].buffer, WHITE);
          logaction(connections[whoisonfd].buffer, FULL);
          for (i1=1;i1<MAXCONNECTIONS;i1++) { // 0 is reserved for console
-          if ( connections[i1].active == 1 && whoisonfd != i1 && connections[whoisonfd].channel == connections[i1].channel ) {
+          if ( connections[i1].active == ON && whoisonfd != i1 && connections[whoisonfd].channel == connections[i1].channel ) {
            write( connections[i1].fd, connections[whoisonfd].buffer, strlen(connections[whoisonfd].buffer) );
           }
          }
@@ -455,7 +455,7 @@ void outputtextfile(int connectionid, char *filename)
   char *line = NULL;
   size_t len = 0;
   ssize_t nread;
-  if ( connections[connectionid].active == 0 )
+  if ( connections[connectionid].active == OFF || connections[connectionid].active == DEADLINK )
    return;
   
      stream = fopen(filename, "r");
@@ -483,7 +483,7 @@ void endcchatd()
   announce(tline, GREEN);
   logaction("cchatd closing", BASIC);
   for (i=1;i<MAXCONNECTIONS;i++) { // 0 is console
-   if ( connections[i].active == 1 ) {
+   if ( connections[i].active ) {
     disconnect(connections[i].fd);
    }
   }

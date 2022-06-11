@@ -35,7 +35,7 @@ enum { BLACKBACKGROUND = 56, REDBACKGROUMD, GREENBACKGROUND, YELLOWBACKGROUMD, B
 #define OLDCLASSRESET 88
 enum { CRESET = 90, BOLDON, UNDERLINEON, BLINKON, REVERSEON, HIDDENON };
 char *BANNEDMESSAGE="you have been banned from this system!\r\n";
-enum { HIDDEN = -1, OFF = 0, ON }; // for .active members
+enum { DEADLINK = -2, HIDDEN = -1, OFF = 0, ON }; // for .active members
 extern const char *STATES[];
 enum { NONE = 1, BASIC, INCREASED, FULL }; // log levels
 extern const char *LOGLEVELS[];
@@ -189,22 +189,20 @@ void disconnect(int fd)
       if ( muteserver == ON )
        return;
       disconnectedusers[ndisconnectedusers++]=i;
-      connections[i].active=INVISIBLE;
+      connections[i].active=DEADLINK;
       connections[i].fd=-1;
 }
 
 // announce disconnected users
 void announcedisconnectedusers()
 {
-  int i, i1;
+  int i;
   char tline[MAXBUFFER];
   
    for (i=0;i<ndisconnectedusers;i++) {
     sprintf(tline, "[ %s ] from %s port %d has disconnected", connections[disconnectedusers[i]].nickname, connections[disconnectedusers[i]].ipaddress, connections[disconnectedusers[i]].port);
     logaction(tline, BASIC);
-    for (i1=0;i1<MAXCONNECTIONS;i1++)
-     if ( connections[i1].active )
-      telluser(i1, tline, GREEN);
+    tellchannelusers( tline, GREEN, connections[disconnectedusers[i]].channel, OFF );
     connections[disconnectedusers[i]].active=OFF;
    }
    
@@ -224,7 +222,7 @@ void announce(char *text, int c)
   
    writeterminal(text, c);
    for (i=1;i<MAXCONNECTIONS;i++) // 0 is reserved for console
-    if ( connections[i].active ) // ansi here
+    if ( connections[i].active && connections[i].active != DEADLINK ) // ansi here
      telluser(i, text, c);
     
 }
@@ -235,7 +233,7 @@ int whoisnick(char *nick)
   int i;
     
    for (i=0;i<MAXCONNECTIONS;i++)
-    if ( !strcmp(connections[i].nickname, nick) && connections[i].active )
+    if ( !strcmp(connections[i].nickname, nick) && connections[i].active && connections[i].active != DEADLINK )
      break;
    if ( i == MAXCONNECTIONS )
     return -1;
@@ -274,7 +272,7 @@ int channelusers(int channelid)
      return 0;
     
     for (i1=0;i1<MAXCONNECTIONS;i1++)
-      if ( connections[i1].channel == channelid && connections[i1].active )
+      if ( connections[i1].channel == channelid && connections[i1].active && connections[i1].active != DEADLINK )
        ++users;
 
  return users;
@@ -286,7 +284,7 @@ int whatchannel(char *name)
   int i;
   
    for (i=0;i<MAXCHANNELS;i++)
-    if ( !strcmp(channels[i].name, name) && channels[i].active == 1 )
+    if ( !strcmp(channels[i].name, name) && channels[i].active == ON )
      break;
    if ( i == MAXCHANNELS )
     return -1;
@@ -300,7 +298,7 @@ int newchannel(char *name)
   int id;
   
    for (id=0;id<MAXCHANNELS;id++)
-    if ( channels[id].active == 0 )
+    if ( channels[id].active == OFF )
      break;
    if ( id == MAXCHANNELS )
     return -1;
@@ -328,7 +326,7 @@ void listchannelusers(int connectionid, int flag) // 0 all users, 1 only to conn
    }
    
    for (i=0;i<MAXCONNECTIONS;i++) {
-    if ( connections[i].active && connections[i].channel == connections[connectionid].channel ) {
+    if ( connections[i].active && connections[i].active != DEADLINK && connections[i].channel == connections[connectionid].channel ) {
      strcat(tline, " [");
      if ( connections[i].active == HIDDEN ) 
       strcat(tline, HIDDENNAME);
@@ -342,7 +340,7 @@ void listchannelusers(int connectionid, int flag) // 0 all users, 1 only to conn
 
    if ( flag == 0 ) { // all users in channel
     for (i=0;i<MAXCONNECTIONS;i++) {
-     if ( connections[i].active == 1 && connections[i].channel == connections[connectionid].channel ) {  
+     if ( connections[i].active && connections[i].active != DEADLINK && connections[i].channel == connections[connectionid].channel ) {  
       telluser(i, tline, CYAN);
      }
     }
@@ -359,7 +357,7 @@ void dismisschannel(int connectionid)
      return;
     // deactivate channel, if need be
     if ( (channelusers(connections[connectionid].channel) == 1) && connections[connectionid].channel != CONSOLEID ) {
-     channels[connections[connectionid].channel].active=0;
+     channels[connections[connectionid].channel].active=OFF;
      if ( outconnections[connections[connectionid].channel].fd > -1 ) {
       close(outconnections[connections[connectionid].channel].fd);
       outconnections[connections[connectionid].channel].fd=-1;
@@ -380,7 +378,7 @@ void telluser(int connectionid, char *text, int c)
    writeterminal( text, c );
    return;
   }
-  if ( connections[connectionid].active == OFF )
+  if ( connections[connectionid].active == OFF || connections[connectionid].active == DEADLINK )
    return;
   char tline[MAXBUFFER];
   int i, ansipair=7;
@@ -404,10 +402,11 @@ void tellchannelusers(char *text, int c, int channelid, int skipconsole)
   int i=skipconsole;
   
     for (;i<MAXCONNECTIONS;i++)
-     if ( connections[i].active && connections[i].channel == channelid )
+     if ( connections[i].active && connections[i].active != DEADLINK && connections[i].channel == channelid )
       telluser(i, text, c);    
 }
 
+// send a number of strings with ANSI references
 void telluseransi(int connectionid, char *text, int num, ...)
 {
   int i;
@@ -415,7 +414,7 @@ void telluseransi(int connectionid, char *text, int num, ...)
   char tline[MAXBUFFER];
   tline[0]='\0';
   
-  if ( connections[connectionid].active == OFF )
+  if ( connections[connectionid].active == OFF || connections[connectionid].active == DEADLINK )
    return;
   
     va_start ( arguments, num );
@@ -434,7 +433,7 @@ int nousers()
   int i, total=0;
   
    for (i=0;i<MAXCONNECTIONS;i++)
-    if ( connections[i].active )
+    if ( connections[i].active && connections[i].active != DEADLINK )
      ++total;
     
  return total;
@@ -446,7 +445,7 @@ int nochannels()
   int i, total=0;
   
    for (i=0;i<MAXCHANNELS;i++)
-    if ( channels[i].active == 1 )
+    if ( channels[i].active == ON )
      ++total;
     
  return total;

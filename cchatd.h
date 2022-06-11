@@ -67,7 +67,7 @@ const char *HIDDENNAME="someone";
 const char *EVERYBODY="all";
 const char *HIDDENIP="X.X.X.X";
 #define CONSOLEID 0
-enum { HIDDEN = -1, OFF = 0, ON }; // for .active members
+enum { DEADLINK = -2, HIDDEN = -1, OFF = 0, ON }; // for .active members
 const char *STATES[] = { "off", "on" };
 enum { NONE = 1, BASIC, INCREASED, FULL }; // log levels
 const char *LOGLEVELS[] = { "empty", "none", "basic", "increased", "full" };

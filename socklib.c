@@ -211,9 +211,6 @@ void announcedisconnectedusers()
 // close outconnection
 void closeoutconnection(int connectionid)
 {
-  if ( outconnections[connections[connectionid].channel].fd == fd_hwm ) {
-   fd_hwm--;
-  }
   close(outconnections[connections[connectionid].channel].fd);
   outconnections[connections[connectionid].channel].fd=-1;
 }

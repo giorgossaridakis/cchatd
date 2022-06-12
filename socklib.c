@@ -94,6 +94,7 @@ int addconnection();
 void disconnect(int fd);
 void announcedisconnectedusers();
 void closeoutconnection(int connectionid);
+void closeoutchannelconnection(int channelid);
 void announce(char *text, int c);
 void dismisschannel(int connectionid);
 void tellchannelusers(char *text, int c, int channelid, int skipconsole);
@@ -213,6 +214,13 @@ void closeoutconnection(int connectionid)
 {
   close(outconnections[connections[connectionid].channel].fd);
   outconnections[connections[connectionid].channel].fd=-1;
+}
+
+// close outconnection by channel id
+void closeoutchannelconnection(int channelid)
+{
+  close(outconnections[channelid].fd);
+  outconnections[channelid].fd=-1;
 }
   
 // announcement

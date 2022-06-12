@@ -175,6 +175,7 @@ extern int addconnection();
 extern void disconnect(int fd);
 extern void announcedisconnectedusers();
 extern void closeoutconnection(int connectionid);
+extern void closeoutchannelconnection(int channelid);
 extern void announce(char *text, int c);
 extern void dismisschannel(int connectionid);
 extern void tellchannelusers(char *text, int c, int channelid, int skipconsole);

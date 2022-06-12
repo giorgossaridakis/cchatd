@@ -128,7 +128,6 @@ char* keyboardhistory[MAXHISTORY];
 int keyboardhistorypos=0, keyboardhistorysize=0;
 int terminalnl=ON;
 int bufpos;
-int disconnectedusers[MAXCONNECTIONS], ndisconnectedusers;
 // extern
 extern WINDOW *win1;
 extern Screen screen, *screens[MAXHISTORY];

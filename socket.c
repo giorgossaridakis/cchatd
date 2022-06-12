@@ -149,7 +149,11 @@ int clientsocket(char* host, char* port)
   arg |= O_NDELAY;
   fcntl(s, F_SETFL, arg);
   
-   freeaddrinfo(res);
+  if (s > fd_hwm) {
+   fd_hwm = s;
+  }
+  
+  freeaddrinfo(res);
    
  return s;
 }

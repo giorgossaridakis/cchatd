@@ -88,7 +88,6 @@ extern int serverport, fd_skt, fd_hwm;
 extern const char *ANSISEQUENCES[96];
 extern int COLORPAIRS[8][2];
 extern int BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE;
-extern int disconnectedusers[MAXCONNECTIONS], ndisconnectedusers;
 
 // function declarations
 int addconnection();
@@ -124,7 +123,7 @@ int addconnection()
    
     fd_client=accept(fd_skt, (struct sockaddr *) &sa2, &sa2_len);
     FD_SET(fd_client, &set);
-     if (fd_client > fd_hwm)
+     if ( fd_client > fd_hwm )
       fd_hwm = fd_client;
      
     if ( (i=whoisfd(fd_client)) != -1 ) {
@@ -136,7 +135,7 @@ int addconnection()
       break;
      // server busy or mutes
     if ( i == MAXCONNECTIONS || muteserver == ON ) {
-     write( fd_client, "this system is currently unavailable\r\n", 38 );
+     send( fd_client, "this system is currently unavailable\r\n", 38, MSG_NOSIGNAL );
      disconnect(fd_client);   
      return 0;
     }
@@ -179,16 +178,15 @@ void disconnect(int fd)
   int i;
     
      i=whoisfd(fd);
+     dismisschannel(i);
      telluser(i, "Goodbye!", RED);
-     dismisschannel(connections[i].channel);
      FD_CLR(fd, &set);
-      if (fd == fd_hwm) {
+      if ( fd == fd_hwm ) {
        fd_hwm--;
       }
       close(fd);
       if ( muteserver == ON )
        return;
-      disconnectedusers[ndisconnectedusers++]=i;
       connections[i].active=DEADLINK;
       connections[i].fd=-1;
 }
@@ -199,11 +197,13 @@ void announcedisconnectedusers()
   int i;
   char tline[MAXBUFFER];
   
-   for (i=0;i<ndisconnectedusers;i++) {
-    sprintf(tline, "[ %s ] from %s port %d has disconnected", connections[disconnectedusers[i]].nickname, connections[disconnectedusers[i]].ipaddress, connections[disconnectedusers[i]].port);
-    logaction(tline, BASIC);
-    tellchannelusers( tline, GREEN, connections[disconnectedusers[i]].channel, OFF );
-    connections[disconnectedusers[i]].active=OFF;
+   for (i=0;i<MAXCONNECTIONS;i++) {
+    if ( connections[i].active == DEADLINK ) {
+     sprintf(tline, "[ %s ] from %s port %d has disconnected", connections[i].nickname, connections[i].ipaddress, connections[i].port);
+     logaction(tline, BASIC);
+     tellchannelusers( tline, GREEN, connections[i].channel, OFF );
+     connections[i].active=OFF;
+    }
    }
    
 }
@@ -211,8 +211,11 @@ void announcedisconnectedusers()
 // close outconnection
 void closeoutconnection(int connectionid)
 {
-  close(outconnections[connectionid].fd);
-  outconnections[connectionid].fd=-1;
+  if ( outconnections[connections[connectionid].channel].fd == fd_hwm ) {
+   fd_hwm--;
+  }
+  close(outconnections[connections[connectionid].channel].fd);
+  outconnections[connections[connectionid].channel].fd=-1;
 }
   
 // announcement
@@ -348,30 +351,30 @@ void listchannelusers(int connectionid, int flag) // 0 all users, 1 only to conn
    if ( flag == 1 )
     telluser(connectionid, tline, CYAN);   
 }
+
 // depart channel
 void dismisschannel(int connectionid)
 {
   int i;
     
-    if ( channelusers(connections[connectionid].channel) > 1 || comms == 1 )
+    if ( channelusers(connections[connectionid].channel) > 1 || connections[connectionid].channel == CONSOLEID || comms == 1 ) {
      return;
-    // deactivate channel, if need be
-    if ( (channelusers(connections[connectionid].channel) == 1) && connections[connectionid].channel != CONSOLEID ) {
+    }
+    
+     // deactivate channel now
      channels[connections[connectionid].channel].active=OFF;
      if ( outconnections[connections[connectionid].channel].fd > -1 ) {
-      close(outconnections[connections[connectionid].channel].fd);
-      outconnections[connections[connectionid].channel].fd=-1;
+      closeoutconnection(connectionid);
       outconnections[connections[connectionid].channel].pipe=OFF;
      }
         // dismiss invitations
      for (i=0;i<MAXCONNECTIONS;i++)
       if ( connections[i].invitation == connections[connectionid].channel )
-       connections[i].invitation=0;
-    }
-    
+       connections[i].invitation=CONSOLEID;
+
 }
 
-// tell user
+// tell user with color
 void telluser(int connectionid, char *text, int c)
 {  
   if ( connections[connectionid].fd == STDOUT_FILENO ) {
@@ -393,7 +396,8 @@ void telluser(int connectionid, char *text, int c)
     strcat(tline, ANSISEQUENCES[OLDCLASSRESET]);
     strcat(tline, "\r\n");
   
-    write( connections[connectionid].fd, tline, strlen(tline) );
+    write ( connections[connectionid].fd, tline, strlen(tline) );
+//     send( connections[connectionid].fd, tline, strlen(tline), MSG_NOSIGNAL ); 
 }
 
 // tell all users in channel
@@ -424,7 +428,7 @@ void telluseransi(int connectionid, char *text, int num, ...)
     strcat( tline, text);
     strcat (tline, ANSISEQUENCES[OLDCLASSRESET]);
     
-    write( connections[connectionid].fd, tline, strlen(tline) );    
+    send( connections[connectionid].fd, tline, strlen(tline), MSG_NOSIGNAL );   
 }    
     
 // total users

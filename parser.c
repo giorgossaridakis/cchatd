@@ -241,6 +241,8 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      telluser(connectionid, "<kick> nickname", RED);
      return 0;
     }
+    snprintf(tline, MAXBUFFER, "%s has been kicked out", words[1]);
+    tellchannelusers(tline, GREEN, connections[i2].channel, OFF);
     kick(i2);
    }
    if ( i == WHO ) {
@@ -307,7 +309,6 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      telluser(connectionid, "you are already in the channel", RED);
      return 0;
     }
-    dismisschannel(connectionid);
     joinchannel(connectionid, i1);
    }
    if ( i == LEAVE ) {
@@ -315,7 +316,6 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      telluser(connectionid, "<leave> any channel except zero", RED);
      return 0;
     }
-    dismisschannel(connectionid);
     joinchannel(connectionid, CONSOLEID);
    }
    if ( i == INVITE ) {
@@ -585,7 +585,7 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
 // join other channel
 void joinchannel(int connectionid, int nextchannel)
 {
-  char tline[MAXBUFFER];  
+  char tline[MAXBUFFER];
     
    if ( comms == 0 ) {
     sprintf(tline, "%s has left the channel", connections[connectionid].nickname);

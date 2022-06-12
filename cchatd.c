@@ -1,7 +1,7 @@
 // cchatd, multi chat server and client with ncurses
 #include "cchatd.h"
 
-const double VERSION=0.96;
+const double VERSION=0.99;
 
 int main(int argc, char *argv[])
 {
@@ -14,6 +14,7 @@ int main(int argc, char *argv[])
   timeout.tv_usec = 125;
   
   signal(SIGINT, INThandler);
+  signal(SIGPIPE, SIG_IGN); // disregard SIGPIPE for broken fds
   
    initscreen();
    initvariables();
@@ -102,7 +103,8 @@ int main(int argc, char *argv[])
      strcat(buf, "\r\n");
      logaction(buf, FULL); 
      if ( outconnections[connections[CONSOLEID].channel].fd > -1 ) {
-      send( outconnections[connections[CONSOLEID].channel].fd, buf, strlen(buf), 0 );
+      write( outconnections[connections[CONSOLEID].channel].fd, buf, strlen(buf) );
+//       send( outconnections[connections[CONSOLEID].channel].fd, buf, strlen(buf), MSG_NOSIGNAL );
      }
      if ( !strcmp(buf, "\r\n") )
       continue;  // skip empty line from here
@@ -120,7 +122,6 @@ int main(int argc, char *argv[])
     }
     
     // read listening sockets
-    ndisconnectedusers = 0;
     for (fd = 0; fd <= fd_hwm; fd++) {
      if (FD_ISSET(fd, &read_set)) {
       if ( fd == fd_skt ) {  // new connection
@@ -144,7 +145,8 @@ int main(int argc, char *argv[])
           continue;
          // send to outbound socket, if any
          if ( outconnections[connections[whoisonfd].channel].pipe == ON && outconnections[connections[whoisonfd].channel].fd > - 1 )
-          send(outconnections[connections[whoisonfd].channel].fd, buf, strlen(buf), 0);         
+          write( outconnections[connections[whoisonfd].channel].fd, buf, strlen(buf) );
+//           send(outconnections[connections[whoisonfd].channel].fd, buf, strlen(buf), MSG_NOSIGNAL);         
          snprintf(connections[whoisonfd].buffer, CONNECTIONBUFFER, "[ %s ] %s\r\n", (connections[whoisonfd].active == HIDDEN) ?  HIDDENNAME : connections[whoisonfd].nickname, bufflines[i2]);
          if ( connections[whoisonfd].channel == connections[0].channel )
           writeterminal(connections[whoisonfd].buffer, WHITE);
@@ -152,6 +154,7 @@ int main(int argc, char *argv[])
          for (i1=1;i1<MAXCONNECTIONS;i1++) { // 0 is reserved for console
           if ( connections[i1].active == ON && whoisonfd != i1 && connections[whoisonfd].channel == connections[i1].channel ) {
            write( connections[i1].fd, connections[whoisonfd].buffer, strlen(connections[whoisonfd].buffer) );
+//            send ( connections[i1].fd, connections[whoisonfd].buffer, strlen(connections[whoisonfd].buffer), MSG_NOSIGNAL );
           }
          }
         }
@@ -466,7 +469,8 @@ void outputtextfile(int connectionid, char *filename)
       if ( connectionid == 0 )
        writeterminal(line, WHITE);
       else
-       write( connections[connectionid].fd, line, nread );
+       write( connections[connectionid].fd, line, strlen(line) );
+//        send ( connections[connectionid].fd, line, nread, MSG_NOSIGNAL );
       memset(line, 0, nread);
      }
     

@@ -25,8 +25,8 @@ extern int COLORPAIRS[8][2];
 #define CONNECTIONBUFFER 2624
 #define MAXNAME 50
 #define MAXWORDS 50
-#define MAXCONNECTIONS 1000
-#define MAXCHANNELS 500
+#define MAXCONNECTIONS 9999
+#define MAXCHANNELS 5000
 #define MAXHISTORY 25000
 #define MAXINPUT 80
 #define MAXLINES 100
@@ -412,7 +412,7 @@ void showscreen()
     }
     color(MAGENTA);
     gotoxy(47, BARROW);
-    printw("[users:%d * total us/ch:%d/%d]", channelusers(connections[CONSOLEID].channel), nousers(), nochannels() );
+    printw("[us:%d * total us/ch:%d/%d]", channelusers(connections[CONSOLEID].channel), nousers(), nochannels() );
    }
    if ( comms == 1 ) {
     // channel name

@@ -1,7 +1,7 @@
 // cchatd, multi chat server and client with ncurses
 #include "cchatd.h"
 
-const double VERSION=0.994;
+const double VERSION=0.995;
 
 int main(int argc, char *argv[])
 {

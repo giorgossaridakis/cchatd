@@ -52,6 +52,7 @@ typedef struct {
    int port;
    char nickname[MAXNAME];
    char buffer[CONNECTIONBUFFER];
+   char date[MAXNAME];
    ui channel;
    ui invitation;
    ui operator;
@@ -114,6 +115,7 @@ extern ui logaction(char *text, int level);
 extern void writeterminal(char *text, int c);
 extern size_t readfileentry(int fd, char *line);
 extern void outputtextfile(int connectionid, char *filename);
+extern char* datetimenow();
 
 // add connection
 int addconnection()
@@ -146,6 +148,7 @@ int addconnection()
     strcpy( connections[i].ipaddress, inet_ntoa(sa2.sin_addr) );
     connections[i].port=ntohs(sa2.sin_port);
     sprintf( connections[i].nickname, "user_%d", i);
+    strcpy( connections[i].date, datetimenow() );
     connections[i].channel=CONSOLEID;
     connections[i].invitation=OFF;
     connections[i].operator=OFF;

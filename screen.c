@@ -49,6 +49,7 @@ typedef struct {
    int port;
    char nickname[MAXNAME];
    char buffer[CONNECTIONBUFFER];
+   char date[MAXNAME];
    ui channel;
    ui invitation;
    ui operator;

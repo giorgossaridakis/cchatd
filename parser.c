@@ -38,6 +38,7 @@ extern const char *CONSOLE;
 extern const char *HIDDENNAME;
 extern const char *HIDDENIP;
 extern const char *EVERYBODY;
+extern char cchatddatetime[MAXNAME];
 
 // global variables
 typedef struct {
@@ -46,6 +47,7 @@ typedef struct {
    int port;
    char nickname[MAXNAME];
    char buffer[CONNECTIONBUFFER];
+   char date[MAXNAME];
    ui channel;
    ui invitation;
    ui operator;
@@ -79,6 +81,7 @@ extern struct tm * timeinfo;
 extern int BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE;
 extern FILE* logfile;
 extern const char *LOGFILE;
+extern char* datetimenow();
 
 // function declarations
 ui fdcommands(char* command, int connectionid);
@@ -259,10 +262,12 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
     telluser(connectionid, "----------------------------------------", BLUE);
     for (i1=0;i1<MAXCONNECTIONS;i1++) {
      if ( connections[i1].active && connections[i1].active != DEADLINK ) {
-      snprintf(tline, MAXBUFFER, "%s%sch:%s%sip:%s port:%d", (connections[i1].active == HIDDEN) ? HIDDENNAME : connections[i1].nickname, (connections[i1].operator == ON ) ? "[op] " : " " , channels[connections[i1].channel].name, (outconnections[connections[i1].channel].fd > -1) ? "* " : " ", (connections[i1].active == HIDDEN) ? HIDDENIP : connections[i1].ipaddress, (connections[i1].active == HIDDEN) ? 0 : connections[i1].port );
+      snprintf(tline, MAXBUFFER, "%s%s{%s}%s%s:%d (%s)", (connections[i1].active == HIDDEN) ? HIDDENNAME : connections[i1].nickname, (connections[i1].operator == ON ) ? "[op] " : " " , channels[connections[i1].channel].name, (outconnections[connections[i1].channel].fd > -1) ? "* " : " ", (connections[i1].active == HIDDEN) ? HIDDENIP : connections[i1].ipaddress, (connections[i1].active == HIDDEN) ? 0 : connections[i1].port, connections[i1].date );
       telluser(connectionid, tline, CYAN);
      }
     }
+    snprintf(tline, MAXBUFFER, "--> online since %s <--", cchatddatetime);
+    telluser(connectionid, tline, YELLOW);
    }
    if ( i == OP ) {
     if ( nwords != 2 || (i2=whoisnick(words[1]))==-1 ) {
@@ -382,6 +387,8 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
       telluser(connectionid, tline, CYAN);
      }
     }
+    snprintf(tline, MAXBUFFER, "--> online since %s <--", cchatddatetime);
+    telluser(connectionid, tline, YELLOW);
    }
    if ( i == NAMES ) {
     if (nwords != 1) {

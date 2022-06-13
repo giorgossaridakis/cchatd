@@ -1,7 +1,7 @@
 // cchatd, multi chat server and client with ncurses
 #include "cchatd.h"
 
-const double VERSION=0.991;
+const double VERSION=0.992;
 
 int main(int argc, char *argv[])
 {
@@ -38,6 +38,7 @@ int main(int argc, char *argv[])
    clear();
 
    // start chatd
+   strcpy(cchatddatetime, datetimenow());
    if ( comms == 0 )
     snprintf(title, MAXINPUT, "*cchatd %.2f listening on %s port %d*", VERSION,  serveraddress, serverport);
    if ( comms == 1 ) // comms error
@@ -192,6 +193,7 @@ void initvariables()
     strcpy( connections[0].ipaddress, serveraddress );
     connections[0].port=serverport;
     strcpy( connections[0].nickname, CONSOLE );
+    strcpy( connections[0].date, datetimenow() );
     connections[0].operator=ON;
     connections[0].channel=OFF;
     connections[0].invitation=OFF;
@@ -420,15 +422,25 @@ ui logaction(char *text, int level)
   if ( logfile == NULL )
     return 0;
    
-   time (&rawtime);
-   timeinfo = localtime (&rawtime);
-   strftime(title, MAXNAME, "[%c] ", timeinfo);
+   snprintf(title, MAXNAME, "[%s] ", datetimenow());
    if ( text[strlen(ttext)-1] != '\n' )
     strcat(ttext, "\r\n");
    fprintf(logfile, "%s %s", title, ttext);
    fflush(logfile);
    
  return loglevel;
+}
+
+// current date to string
+char* datetimenow()
+{
+  static char datetime[MAXNAME];
+  time (&rawtime);
+  timeinfo = localtime (&rawtime);
+ 
+   strftime(datetime, MAXNAME, "%c", timeinfo);
+   
+ return &datetime[0];
 }
 
 // log requested text

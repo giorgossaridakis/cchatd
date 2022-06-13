@@ -82,6 +82,7 @@ typedef struct {
    int port;
    char nickname[MAXNAME];
    char buffer[CONNECTIONBUFFER];
+   char date[MAXNAME];
    ui channel;
    ui invitation;
    ui operator;
@@ -128,6 +129,7 @@ char* keyboardhistory[MAXHISTORY];
 int keyboardhistorypos=0, keyboardhistorysize=0;
 int terminalnl=ON;
 int bufpos;
+char cchatddatetime[MAXNAME];
 // extern
 extern WINDOW *win1;
 extern Screen screen, *screens[MAXHISTORY];
@@ -140,6 +142,7 @@ void initvariables();
 int readkeyboard(WINDOW *twin);
 void freekeyboardhistory(int lines);
 ui logaction(char *text, int level);
+char* datetimenow();
 ui logoutconnectionaction(char *text, int level);
 void outputtextfile(int connectionid, char *filename);
 void endcchatd();

@@ -169,7 +169,7 @@ int addconnection()
     telluser(whoisfd(fd_client), tline, BLUE);
     sprintf( tline, "[ %s ] connected from %s port %d", connections[i].nickname,  connections[i].ipaddress, connections[i].port );
     logaction(tline, BASIC);
-    tellchannelusers( tline, GREEN, CONSOLEID, CONSOLEID );
+    tellchannelusers( tline, GREEN, CONSOLEID, OFF );
     // read news file
     outputtextfile(i, (char *)NEWSFILE);
     

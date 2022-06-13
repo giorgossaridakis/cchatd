@@ -279,7 +279,8 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      return 0;
     }
     connections[i2].operator=ON;
-    telluser(connectionid, "user has been OPed", GREEN);
+    sprintf(tline, "%s has been OPed", connections[i2].nickname);
+    tellchannelusers( tline, GREEN, connections[connectionid].channel, OFF );
     sprintf(tline, "you have been OPed by [ %s ]", connections[connectionid].nickname);
     telluser(i2, tline, GREEN);
    }
@@ -289,12 +290,15 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      return 0;
     }
     if ( connections[i2].operator == OFF ) {
-     telluser(connectionid, "user is not an operator", RED);
+     sprintf(tline, "%s is not an operator", connections[i2].nickname);
+     telluser(connectionid, tline, RED);
      return 0;
     }
     connections[i2].operator=OFF;
-    telluser(connectionid, "user has been de-OPed", RED);
-    telluser(i2, "you have been de-OPed", RED);
+    sprintf(tline, "%s has been de-OPed", connections[i2].nickname);
+    tellchannelusers( tline, GREEN, CONSOLEID, OFF );
+    sprintf(tline, "you have been de-OPed by [ %s ]", connections[connectionid].nickname);
+    telluser(i2, tline, GREEN);
    }
    if ( i== JOIN ) {
     if ( nwords != 2 ) {

@@ -1,7 +1,7 @@
 // cchatd, multi chat server and client with ncurses
 #include "cchatd.h"
 
-const double VERSION=0.992;
+const double VERSION=0.994;
 
 int main(int argc, char *argv[])
 {
@@ -105,7 +105,6 @@ int main(int argc, char *argv[])
      logaction(buf, FULL); 
      if ( outconnections[connections[CONSOLEID].channel].fd > -1 ) {
       write( outconnections[connections[CONSOLEID].channel].fd, buf, strlen(buf) );
-//       send( outconnections[connections[CONSOLEID].channel].fd, buf, strlen(buf), MSG_NOSIGNAL );
      }
      if ( !strcmp(buf, "\r\n") )
       continue;  // skip empty line from here
@@ -146,8 +145,7 @@ int main(int argc, char *argv[])
           continue;
          // send to outbound socket, if any
          if ( outconnections[connections[whoisonfd].channel].pipe == ON && outconnections[connections[whoisonfd].channel].fd > - 1 )
-          write( outconnections[connections[whoisonfd].channel].fd, buf, strlen(buf) );
-//           send(outconnections[connections[whoisonfd].channel].fd, buf, strlen(buf), MSG_NOSIGNAL);         
+          send(outconnections[connections[whoisonfd].channel].fd, buf, strlen(buf), MSG_NOSIGNAL);         
          snprintf(connections[whoisonfd].buffer, CONNECTIONBUFFER, "[ %s ] %s\r\n", (connections[whoisonfd].active == HIDDEN) ?  HIDDENNAME : connections[whoisonfd].nickname, bufflines[i2]);
          if ( connections[whoisonfd].channel == connections[0].channel )
           writeterminal(connections[whoisonfd].buffer, WHITE);
@@ -155,7 +153,6 @@ int main(int argc, char *argv[])
          for (i1=1;i1<MAXCONNECTIONS;i1++) { // 0 is reserved for console
           if ( connections[i1].active == ON && whoisonfd != i1 && connections[whoisonfd].channel == connections[i1].channel ) {
            write( connections[i1].fd, connections[whoisonfd].buffer, strlen(connections[whoisonfd].buffer) );
-//            send ( connections[i1].fd, connections[whoisonfd].buffer, strlen(connections[whoisonfd].buffer), MSG_NOSIGNAL );
           }
          }
         }
@@ -417,10 +414,9 @@ ui logaction(char *text, int level)
  char ttext[strlen(text)];
  strcpy(ttext, text);
   
-  if ( level > loglevel || loglevel == NONE )
+  if ( level > loglevel || loglevel == NONE || logfile == NULL ) {
    return 0;
-  if ( logfile == NULL )
-    return 0;
+  }
    
    snprintf(title, MAXNAME, "[%s] ", datetimenow());
    if ( text[strlen(ttext)-1] != '\n' )
@@ -449,10 +445,9 @@ ui logoutconnectionaction(char *text, int level)
   char ttext[strlen(text)];
   strcpy(ttext, text);
   
-  if ( level > loglevel )
+  if ( level > loglevel || logfile == 0 ) {
    return 0;
-  if ( logfile == 0 )
-    return 0;
+  }
 
    if ( text[strlen(ttext)-1] != '\n' )
     strcat(ttext, "\n");
@@ -461,7 +456,6 @@ ui logoutconnectionaction(char *text, int level)
    
  return loglevel;
 }
-
 
 // read text file to connection
 void outputtextfile(int connectionid, char *filename)

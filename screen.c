@@ -25,8 +25,8 @@ extern int COLORPAIRS[8][2];
 #define CONNECTIONBUFFER 2624
 #define MAXNAME 50
 #define MAXWORDS 50
-#define MAXCONNECTIONS 5000
-#define MAXCHANNELS 2500
+#define MAXCONNECTIONS 100000
+#define MAXCHANNELS 50000
 #define MAXHISTORY 25000
 #define MAXINPUT 80
 #define MAXLINES 100
@@ -55,7 +55,8 @@ typedef struct {
    ui operator;
    ui active;
                 } Connection;
-extern Connection connections[MAXCONNECTIONS];
+extern Connection* connections[MAXCONNECTIONS];
+extern int nconnections;
 
 typedef struct {
    char name[MAXNAME];
@@ -63,7 +64,8 @@ typedef struct {
    ui locked;
    ui active;
                } Channel;
-extern Channel channels[MAXCHANNELS];
+extern Channel* channels[MAXCHANNELS];
+extern int nchannels;
 
 typedef struct {
     int fd;
@@ -73,8 +75,8 @@ typedef struct {
     char bufferlines[MAXLINES][MAXBUFFER/2];
     int nbuffers;
                } OutConnection;
-extern OutConnection outconnections[MAXCHANNELS];
-
+extern OutConnection* outconnections[MAXCHANNELS];
+extern int noutconnections;
 
 typedef struct {
     int pair;
@@ -354,16 +356,16 @@ void showscreen()
     // channel name
     color(YELLOW);
     gotoxy(3, BARROW);
-    printw("[ch:%.10s]", channels[connections[CONSOLEID].channel].name);
+    printw("[ch:%.10s]", channels[connections[CONSOLEID]->channel]->name);
     // locked or not
-    if ( channels[connections[CONSOLEID].channel].locked == OFF ) {
+    if ( channels[connections[CONSOLEID]->channel]->locked == OFF ) {
      gotoxy(19, BARROW);
      color(BLUE);
      attributes(DIM);
      printw("[ locked]");
      attributes(NORMAL);
     }
-    if ( channels[connections[CONSOLEID].channel].locked == ON ) {
+    if ( channels[connections[CONSOLEID]->channel]->locked == ON ) {
      gotoxy(19, BARROW);
      color(BLUE);
      addch('[');
@@ -393,14 +395,14 @@ void showscreen()
      attributes(NORMAL);
     }
     // connected to out socket or not
-    if ( outconnections[connections[CONSOLEID].channel].fd == -1 ) {
+    if ( outconnections[connections[CONSOLEID]->channel]->fd == -1 ) {
      color(GREEN);
      gotoxy(37, BARROW);
      attributes(DIM);
      printw("[ telnet]");
      attributes(NORMAL);
     }
-    if ( outconnections[connections[CONSOLEID].channel].fd > -1 ) {
+    if ( outconnections[connections[CONSOLEID]->channel]->fd > -1 ) {
      color(GREEN);
      gotoxy(37, BARROW);
      addch('[');
@@ -412,13 +414,13 @@ void showscreen()
     }
     color(MAGENTA);
     gotoxy(47, BARROW);
-    printw("[us:%d * total us/ch:%d/%d]", channelusers(connections[CONSOLEID].channel), nousers(), nochannels() );
+    printw("[us:%d * total us/ch:%d/%d]", channelusers(connections[CONSOLEID]->channel), nousers(), nochannels() );
    }
    if ( comms == 1 ) {
     // channel name
     color(YELLOW);
     gotoxy(48, BARROW);
-    printw("[ch:%s]", channels[connections[CONSOLEID].channel].name);
+    printw("[ch:%s]", channels[connections[CONSOLEID]->channel]->name);
     // keeping log or not
     if ( loglevel == NONE ) {
      color(MAGENTA);
@@ -438,14 +440,14 @@ void showscreen()
      printw("log]");
     }
     // connected to out socket or not
-    if ( outconnections[connections[CONSOLEID].channel].fd == -1 ) {
+    if ( outconnections[connections[CONSOLEID]->channel]->fd == -1 ) {
      color(GREEN);
      gotoxy(65, BARROW);
      attributes(DIM);
      printw("[ connnection]"); 
      attributes(NORMAL);
     }
-    if ( outconnections[connections[CONSOLEID].channel].fd > -1 ) {
+    if ( outconnections[connections[CONSOLEID]->channel]->fd > -1 ) {
      color(GREEN);
      gotoxy(65, BARROW);
      addch('[');

@@ -31,8 +31,8 @@ enum { NORMAL=0, STANDOUT, UNDERLINE, REVERSE, BLINK, DIM, BOLD, PROTECT, INVISI
 #define CONNECTIONBUFFER 2624
 #define MAXNAME 50
 #define MAXWORDS 50
-#define MAXCONNECTIONS 5000
-#define MAXCHANNELS 2500
+#define MAXCONNECTIONS 100000
+#define MAXCHANNELS 50000
 #define MAXHISTORY 25000
 #define MAXINPUT 80
 #define MAXLINES 100
@@ -88,7 +88,8 @@ typedef struct {
    ui operator;
    ui active;
                 } Connection;
-Connection connections[MAXCONNECTIONS];
+Connection* connections[MAXCONNECTIONS];
+int nconnections=0;
 
 typedef struct {
    char name[MAXNAME];
@@ -96,7 +97,8 @@ typedef struct {
    ui locked;
    ui active;
                } Channel;
-Channel channels[MAXCHANNELS];
+Channel* channels[MAXCHANNELS];
+int nchannels=0;
 
 typedef struct {
     int fd;
@@ -106,7 +108,8 @@ typedef struct {
     char bufferlines[MAXLINES][MAXBUFFER/2];
     int nbuffers;
                } OutConnection;
-OutConnection outconnections[MAXCHANNELS];
+OutConnection* outconnections[MAXCHANNELS];
+int noutconnections;
 
 typedef struct {
     int attributes[SCREENX][SCREENY];
@@ -139,6 +142,8 @@ extern int BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE;
 // function declarations
 // local
 void initvariables();
+Connection* nextconnection();
+Channel* nextchannel();
 int readkeyboard(WINDOW *twin);
 void freekeyboardhistory(int lines);
 ui logaction(char *text, int level);
@@ -190,7 +195,7 @@ extern int whoisfd(int fd);
 void kick(int connectionid);
 extern int channelusers(int channelid);
 extern int whatchannel(char *name);
-extern int newchannel(char *name);
+extern int addchannel(char *name);
 extern void listchannelusers(int connectionid, int flag);
 //parser.c 
 extern ui fdcommands(char* command, int connectionid);

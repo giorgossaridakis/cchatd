@@ -20,8 +20,8 @@ enum { NORMAL=0, STANDOUT, UNDERLINE, REVERSE, BLINK, DIM, BOLD, PROTECT, INVISI
 #define CONNECTIONBUFFER 2624
 #define MAXNAME 50
 #define MAXWORDS 50
-#define MAXCONNECTIONS 5000
-#define MAXCHANNELS 2500
+#define MAXCONNECTIONS 100000
+#define MAXCHANNELS 50000
 #define MAXHISTORY 25000
 #define MAXINPUT 80
 #define MAXLINES 100
@@ -53,7 +53,8 @@ typedef struct {
    ui operator;
    ui active;
                 } Connection;
-extern Connection connections[MAXCONNECTIONS];
+extern Connection* connections[MAXCONNECTIONS];
+extern int nconnections;
 
 typedef struct {
    char name[MAXNAME];
@@ -61,7 +62,8 @@ typedef struct {
    ui locked;
    ui active;
                } Channel;
-extern Channel channels[MAXCHANNELS];
+extern Channel* channels[MAXCHANNELS];
+extern int nchannels;
 
 typedef struct {
     int fd;
@@ -71,7 +73,8 @@ typedef struct {
     char bufferlines[MAXLINES][MAXBUFFER/2];
     int nbuffers;
                } OutConnection;
-extern OutConnection outconnections[MAXCHANNELS];
+extern OutConnection* outconnections[MAXCHANNELS];
+extern int noutconnections;
 
 // extern
 extern int loglevel, muteserver, comms;
@@ -100,7 +103,7 @@ extern void endcchatd();
 extern void disconnect(int fd);
 extern void kick(int connectionid);
 extern int whatchannel(char *name);
-extern int newchannel(char *name);
+extern int addchannel(char *name);
 extern void listchannelusers(int connectionid, int flag);
 extern void dismisschannel(int connectionid);
 extern void tellchannelusers(char *text, int c, int channelid, int skipconsole);
@@ -136,7 +139,7 @@ ui fdcommands(char* command, int connectionid)
     tcommand[i]='\0';
   
     nwords=assignstringvaluestoarray(tcommand, words, MAXWORDS);
-    snprintf(tline, MAXBUFFER, "%s->", connections[connectionid].nickname);
+    snprintf(tline, MAXBUFFER, "%s->", connections[connectionid]->nickname);
     strcat(tline, tcommand);
     logaction(tline, INCREASED);
     parsecommand(words, bwords, nwords, connectionid);
@@ -160,7 +163,7 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
     if ( !strcmp(words[0], COMMANDS[i]) )
      break;
    // parse for errors in request
-   if ( ( comms == 1 && i != OPEN && i != CLOSE && i != QUIT && i != LOG && i != HELP ) || i == 26 || ( i > HIDE && connections[connectionid].operator == OFF ) || ( i > OP && connectionid != CONSOLEID ) ) {
+   if ( ( comms == 1 && i != OPEN && i != CLOSE && i != QUIT && i != LOG && i != HELP ) || i == 26 || ( i > HIDE && connections[connectionid]->operator == OFF ) || ( i > OP && connectionid != CONSOLEID ) ) {
     telluser(connectionid, "unknown command", RED);
     return 0;
    }
@@ -176,7 +179,7 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      return 0;
     }
     strcpy(tline, "commands are: help (this help), nick <new nickname>, who, msg <nick> <message>, list (channels), join <channel>, leave (this channel), invite <nickname>, topic <channel topic>, lock (this channel), unlock (this channel), report <your report>, names (in this channel), quit");
-    if ( connections[connectionid].operator == ON )
+    if ( connections[connectionid]->operator == ON )
      strcat(tline, ", hide, announce <message>, kick <nick>, op <nick>");
     if ( connectionid == CONSOLEID) 
      strcat(tline, ", deop <nick>, ban <nick>, read <filename>, log <level>, open <server> <port>, close, pipe, mute [ console keys TAB, SHIFT_TAB, UP, DOWN, PG_UP, PG_DOWN ]");
@@ -193,11 +196,11 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      telluser(connectionid, "that nickname is already taken", RED);
      return 0;
     }
-    sprintf( tline, "%s is now known as %s", connections[connectionid].nickname, words[1] );
+    sprintf( tline, "%s is now known as %s", connections[connectionid]->nickname, words[1] );
     logaction(tline, INCREASED);
-    if ( connections[connectionid].active != HIDDEN )
+    if ( connections[connectionid]->active != HIDDEN )
      announce(tline, GREEN);
-    strcpy( connections[connectionid].nickname, words[1] );
+    strcpy( connections[connectionid]->nickname, words[1] );
    }
    if ( i == QUIT ) {
     if ( nwords != 1 ) {
@@ -206,7 +209,7 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
     if ( connectionid == 0 )
      endcchatd();
     else
-     disconnect(connections[connectionid].fd);
+     disconnect(connections[connectionid]->fd);
    }
    
    if ( i == ANNOUNCE ) {
@@ -214,7 +217,7 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      telluser(connectionid, "<announce> your announcement", RED);
      return 0;
     }
-    sprintf(tline, "***\aannouncement from [ %s ]*** ", connections[connectionid].nickname);
+    sprintf(tline, "***\aannouncement from [ %s ]*** ", connections[connectionid]->nickname);
     for (i1=1;i1<nwords;i1++) {
      strcat(tline, bwords[i1]);
      strcat(tline, " ");
@@ -232,11 +235,11 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      telluser(connectionid, "<ban> nickname", RED);
      return 0;
     }
-    write(i1, connections[i2].ipaddress, strlen(connections[i2].ipaddress) );
+    write(i1, connections[i2]->ipaddress, strlen(connections[i2]->ipaddress) );
     write(i1, "\n", 1);
     close(i1);
     kick(i2);
-    sprintf(tline, "%s from %s is banned", connections[i2].nickname, connections[i2].ipaddress);
+    sprintf(tline, "%s from %s is banned", connections[i2]->nickname, connections[i2]->ipaddress);
     telluser(connectionid, tline, RED);
    }
    if ( i == KICK ) {
@@ -245,7 +248,7 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      return 0;
     }
     snprintf(tline, MAXBUFFER, "%s has been kicked out", words[1]);
-    tellchannelusers(tline, GREEN, connections[i2].channel, OFF);
+    tellchannelusers(tline, GREEN, connections[i2]->channel, OFF);
     kick(i2);
    }
    if ( i == WHO ) {
@@ -260,9 +263,9 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
     strcpy(title, tline);
     telluser(connectionid, title, BLUE);
     telluser(connectionid, "----------------------------------------", BLUE);
-    for (i1=0;i1<MAXCONNECTIONS;i1++) {
-     if ( connections[i1].active && connections[i1].active != DEADLINK ) {
-      snprintf(tline, MAXBUFFER, "%s%s{%s}%s%s:%d (%s)", (connections[i1].active == HIDDEN) ? HIDDENNAME : connections[i1].nickname, (connections[i1].operator == ON ) ? "[op] " : " " , channels[connections[i1].channel].name, (outconnections[connections[i1].channel].fd > -1) ? "* " : " ", (connections[i1].active == HIDDEN) ? HIDDENIP : connections[i1].ipaddress, (connections[i1].active == HIDDEN) ? 0 : connections[i1].port, connections[i1].date );
+    for (i1=0;i1<nconnections;i1++) {
+     if ( connections[i1]->active && connections[i1]->active != DEADLINK ) {
+      snprintf(tline, MAXBUFFER, "%s%s{%s}%s%s:%d (%s)", (connections[i1]->active == HIDDEN) ? HIDDENNAME : connections[i1]->nickname, (connections[i1]->operator == ON ) ? "[op] " : " " , channels[connections[i1]->channel]->name, (outconnections[connections[i1]->channel]->fd > -1) ? "* " : " ", (connections[i1]->active == HIDDEN) ? HIDDENIP : connections[i1]->ipaddress, (connections[i1]->active == HIDDEN) ? 0 : connections[i1]->port, connections[i1]->date );
       telluser(connectionid, tline, CYAN);
      }
     }
@@ -274,14 +277,14 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      telluser(connectionid, "<op> nickname", RED);
      return 0;
     }
-    if ( connections[i2].operator == ON ) {
+    if ( connections[i2]->operator == ON ) {
      telluser(connectionid, "user is already operator", RED);
      return 0;
     }
-    connections[i2].operator=ON;
-    sprintf(tline, "%s has been OPed", connections[i2].nickname);
-    tellchannelusers( tline, GREEN, connections[connectionid].channel, OFF );
-    sprintf(tline, "you have been OPed by [ %s ]", connections[connectionid].nickname);
+    connections[i2]->operator=ON;
+    sprintf(tline, "%s has been OPed", connections[i2]->nickname);
+    tellchannelusers( tline, GREEN, connections[connectionid]->channel, OFF );
+    sprintf(tline, "you have been OPed by [ %s ]", connections[connectionid]->nickname);
     telluser(i2, tline, GREEN);
    }
    if ( i == DEOP ) {
@@ -289,15 +292,15 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      telluser(connectionid, "<deop> nickname", RED);
      return 0;
     }
-    if ( connections[i2].operator == OFF ) {
-     sprintf(tline, "%s is not an operator", connections[i2].nickname);
+    if ( connections[i2]->operator == OFF ) {
+     sprintf(tline, "%s is not an operator", connections[i2]->nickname);
      telluser(connectionid, tline, RED);
      return 0;
     }
-    connections[i2].operator=OFF;
-    sprintf(tline, "%s has been de-OPed", connections[i2].nickname);
+    connections[i2]->operator=OFF;
+    sprintf(tline, "%s has been de-OPed", connections[i2]->nickname);
     tellchannelusers( tline, GREEN, CONSOLEID, OFF );
-    sprintf(tline, "you have been de-OPed by [ %s ]", connections[connectionid].nickname);
+    sprintf(tline, "you have been de-OPed by [ %s ]", connections[connectionid]->nickname);
     telluser(i2, tline, GREEN);
    }
    if ( i== JOIN ) {
@@ -306,22 +309,22 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      return 0;
     }
     if ( (i1=whatchannel(words[1])) == -1 )
-     if ( (i1=newchannel(words[1])) == -1 ) {
+     if ( (i1=addchannel(words[1])) == -1 ) {
      telluser(connectionid, "all channels are occupied, try later", RED);
      return 0;
     }
-    if ( channels[i1].locked == ON && connections[connectionid].invitation != i1 ) {
+    if ( channels[i1]->locked == ON && connections[connectionid]->invitation != i1 ) {
      telluser(connectionid,  "channel is private, you haven't been invited!", RED);
      return 0;
     }
-    if ( connections[connectionid].channel == i1 ) {
+    if ( connections[connectionid]->channel == i1 ) {
      telluser(connectionid, "you are already in the channel", RED);
      return 0;
     }
     joinchannel(connectionid, i1);
    }
    if ( i == LEAVE ) {
-    if ( nwords != 1 || connections[connectionid].channel == CONSOLEID ) {
+    if ( nwords != 1 || connections[connectionid]->channel == CONSOLEID ) {
      telluser(connectionid, "<leave> any channel except zero", RED);
      return 0;
     }
@@ -340,9 +343,9 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      telluser(connectionid, "no such user online", RED);
      return 0;
     }
-    sprintf(tline, "%s is inviting you to %s", connections[connectionid].nickname, channels[connections[connectionid].channel].name);
-    if ( connections[i2].channel != connections[connectionid].channel ) {
-     connections[i2].invitation=connections[connectionid].channel;
+    sprintf(tline, "%s is inviting you to %s", connections[connectionid]->nickname, channels[connections[connectionid]->channel]->name);
+    if ( connections[i2]->channel != connections[connectionid]->channel ) {
+     connections[i2]->invitation=connections[connectionid]->channel;
      telluser(i2, tline, CYAN);
      telluser(connectionid, "invitation sent", CYAN);
     }
@@ -354,7 +357,7 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      telluser(connectionid, "<topic> new channel topic", RED);
      return 0;
     }
-    if ( connections[connectionid].channel == CONSOLEID && connectionid != CONSOLEID ) {
+    if ( connections[connectionid]->channel == CONSOLEID && connectionid != CONSOLEID ) {
      telluser(connectionid, "<topic> not possible", RED);
      return 0;
     }
@@ -364,10 +367,10 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      strcat(tline, bwords[i1]);
      strcat(tline, " ");
     }
-    strcpy( channels[connections[connectionid].channel].topic, limitspaces(tline) );
+    strcpy( channels[connections[connectionid]->channel]->topic, limitspaces(tline) );
     strcat(tline, "");
-    for (i2=0;i2<MAXCONNECTIONS;i2++) {
-     if ( connections[i2].active && connections[i2].active != DEADLINK && connections[i2].channel == connections[connectionid].channel ) {
+    for (i2=0;i2<nconnections;i2++) {
+     if ( connections[i2]->active && connections[i2]->active != DEADLINK && connections[i2]->channel == connections[connectionid]->channel ) {
       telluser(i2, title, BLUE);
       telluser(i2, tline, CYAN);
      }
@@ -385,9 +388,9 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
     strcpy(title, tline);
     telluser(connectionid, title, BLUE);
     telluser(connectionid, "----------------------------------------", BLUE);
-    for (i1=0;i1<MAXCHANNELS;i1++) {
-     if ( channels[i1].active == ON ) {
-      sprintf( tline, "ch:%s%s%stopic:%s users:%d", channels[i1].name, (channels[i1].locked == 1 ) ? "[priv]" : "[pub]", (outconnections[i1].fd > -1) ? "* " : " ",  channels[i1].topic, channelusers(i1) );
+    for (i1=0;i1<nchannels;i1++) {
+     if ( channels[i1]->active == ON ) {
+      sprintf( tline, "ch:%s%s%stopic:%s users:%d", channels[i1]->name, (channels[i1]->locked == 1 ) ? "[priv]" : "[pub]", (outconnections[i1]->fd > -1) ? "* " : " ",  channels[i1]->topic, channelusers(i1) );
       telluser(connectionid, tline, CYAN);
      }
     }
@@ -406,14 +409,14 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      telluser(connectionid, "<lock> ->no parameters<-", RED);
      return 0;
     }
-    if ( connections[connectionid].channel == CONSOLEID ) {
+    if ( connections[connectionid]->channel == CONSOLEID ) {
      telluser(connectionid, "channel zero cannot be locked!\n", RED);
      return 0;
     }
-    if ( channels[connections[connectionid].channel].locked == 1 )
+    if ( channels[connections[connectionid]->channel]->locked == 1 )
      telluser(connectionid, "channel is already locked!", RED);
     else {
-     channels[connections[connectionid].channel].locked=1;
+     channels[connections[connectionid]->channel]->locked=1;
      telluser(connectionid, "channel locked", CYAN);
     }
    }
@@ -422,10 +425,10 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      telluser(connectionid, "<unlock> ->no parameters<-", RED);
      return 0;
     }
-    if ( channels[connections[connectionid].channel].locked == 0 )
+    if ( channels[connections[connectionid]->channel]->locked == 0 )
      telluser(connectionid, "channel is already unlocked!", RED);
     else {
-     channels[connections[connectionid].channel].locked=0;
+     channels[connections[connectionid]->channel]->locked=0;
      telluser(connectionid, "channel unlocked", CYAN);
     }
    }
@@ -434,7 +437,7 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      telluser(connectionid, "<msg> nickname message", RED);
      return 0;
     }
-    sprintf(tline, "%s[priv]:", connections[connectionid].nickname);
+    sprintf(tline, "%s[priv]:", connections[connectionid]->nickname);
     for (i1=2;i1<nwords;i1++) {
      strcat(tline, bwords[i1]);
      strcat(tline, " ");
@@ -485,7 +488,7 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
      telluser(connectionid, "report submitted", GREEN);
      if ( loglevel == NONE )
       return 0;
-     snprintf(tline, MAXBUFFER, "%s has submitted a report: ", connections[connectionid].nickname);
+     snprintf(tline, MAXBUFFER, "%s has submitted a report: ", connections[connectionid]->nickname);
      for (i2=1;i2<nwords;i2++) {
       strcat(tline, words[nwords]);
       strcat(tline, " ");
@@ -498,31 +501,31 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
       telluser(connectionid, "<open> server port", RED);
       return 0;
      }
-     if ( outconnections[connections[connectionid].channel].fd > -1 ) {
+     if ( outconnections[connections[connectionid]->channel]->fd > -1 ) {
       telluser(connectionid, "channel already connected", RED);
       return 0;
      }
-     if ( (outconnections[connections[connectionid].channel].fd=clientsocket(words[1], words[2])) == -1 ) {
+     if ( (outconnections[connections[connectionid]->channel]->fd=clientsocket(words[1], words[2])) == -1 ) {
       return 0;
      }
-     strcpy( outconnections[connections[connectionid].channel].ipaddress, words[1] );
-     strcpy( outconnections[connections[connectionid].channel].port, words[2] );
-     snprintf(tline, MAXBUFFER, "channel now connected to %s %s", outconnections[connections[connectionid].channel].ipaddress, outconnections[connections[connectionid].channel].port);
-     if ( outconnections[connections[connectionid].channel].pipe == ON )
-      tellchannelusers(tline, GREEN, connections[connectionid].channel, OFF);
+     strcpy( outconnections[connections[connectionid]->channel]->ipaddress, words[1] );
+     strcpy( outconnections[connections[connectionid]->channel]->port, words[2] );
+     snprintf(tline, MAXBUFFER, "channel now connected to %s %s", outconnections[connections[connectionid]->channel]->ipaddress, outconnections[connections[connectionid]->channel]->port);
+     if ( outconnections[connections[connectionid]->channel]->pipe == ON )
+      tellchannelusers(tline, GREEN, connections[connectionid]->channel, OFF);
     }
     if ( i == CLOSE ) {
      if ( nwords != 1 ) {
       telluser(connectionid, "<close> ->no parameters<-", RED);
       return 0;
      }
-     if ( outconnections[connections[connectionid].channel].fd == -1 ) {
+     if ( outconnections[connections[connectionid]->channel]->fd == -1 ) {
       telluser(connectionid, "channel is not connected", RED);
       return 0;
      }
-     closeoutconnection(connections[connectionid].channel);
-     if ( outconnections[connections[connectionid].channel].pipe == ON )
-      tellchannelusers("connection closed/reset", GREEN, connections[connectionid].channel, OFF);
+     closeoutconnection(connections[connectionid]->channel);
+     if ( outconnections[connections[connectionid]->channel]->pipe == ON )
+      tellchannelusers("connection closed/reset", GREEN, connections[connectionid]->channel, OFF);
     }
     if ( i == MUTESERVER ) {
      if ( nwords > 2 ) {
@@ -548,11 +551,11 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
       if ( !strcmp(STATES[i2], words[1]) )
        break;
      if  ( i2 == 2 )
-      outconnections[connections[0].channel].pipe=(outconnections[connections[0].channel].pipe == ON) ? OFF : ON;
+      outconnections[connections[0]->channel]->pipe=(outconnections[connections[0]->channel]->pipe == ON) ? OFF : ON;
      else
-      outconnections[connections[0].channel].pipe=i2;
-     snprintf( tline, MAXBUFFER,  "data pipe for channel is now %s", STATES[outconnections[connections[0].channel].pipe] );
-     tellchannelusers( tline, GREEN, connections[0].channel, OFF );
+      outconnections[connections[0]->channel]->pipe=i2;
+     snprintf( tline, MAXBUFFER,  "data pipe for channel is now %s", STATES[outconnections[connections[0]->channel]->pipe] );
+     tellchannelusers( tline, GREEN, connections[0]->channel, OFF );
     }
     if ( i == HIDE ) {
      if ( nwords > 2 ) {
@@ -563,15 +566,15 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
       if ( !strcmp(STATES[i2], words[1]) )
        break;
      if  ( i2 == 2 )
-      connections[connectionid].active=(connections[connectionid].active == ON) ? HIDDEN : ON;
+      connections[connectionid]->active=(connections[connectionid]->active == ON) ? HIDDEN : ON;
      else {
       i2=( i2 == ON ) ? HIDDEN : OFF;
-      connections[connectionid].active=i2;
+      connections[connectionid]->active=i2;
      }
-     snprintf(tline, MAXBUFFER, "you are now%shidden", (connections[connectionid].active == HIDDEN) ? " " : " not ");
+     snprintf(tline, MAXBUFFER, "you are now%shidden", (connections[connectionid]->active == HIDDEN) ? " " : " not ");
      telluser(connectionid, tline, GREEN);
-     snprintf(tline, MAXBUFFER, "%s suddenly %s", connections[connectionid].nickname, (connections[connectionid].active == HIDDEN) ? "dissappears" : "appears");
-     tellchannelusers( tline, GREEN, connections[connectionid].channel, OFF );
+     snprintf(tline, MAXBUFFER, "%s suddenly %s", connections[connectionid]->nickname, (connections[connectionid]->active == HIDDEN) ? "dissappears" : "appears");
+     tellchannelusers( tline, GREEN, connections[connectionid]->channel, OFF );
     }
     if ( i == READ ) {
      if ( nwords != 3 ) {
@@ -583,7 +586,7 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
       return 0;
      }
      if ( i2 == -1 ) // everybody
-      for (i1=0;i1<MAXCONNECTIONS;i1++)
+      for (i1=0;i1<nconnections;i1++)
        outputtextfile(i1, words[2]);
      else
       outputtextfile(i2, words[2]);
@@ -599,13 +602,13 @@ void joinchannel(int connectionid, int nextchannel)
   char tline[MAXBUFFER];
     
    if ( comms == 0 ) {
-    sprintf(tline, "%s has left the channel", connections[connectionid].nickname);
-    tellchannelusers( tline, GREEN, connections[connectionid].channel, OFF );
+    sprintf(tline, "%s has left the channel", connections[connectionid]->nickname);
+    tellchannelusers( tline, GREEN, connections[connectionid]->channel, OFF );
    }
    dismisschannel(connectionid);
-   connections[connectionid].channel=nextchannel;
+   connections[connectionid]->channel=nextchannel;
    if ( comms == 0 ) {
-    sprintf(tline, "%s has joined %s", connections[connectionid].nickname, channels[nextchannel].name);
+    sprintf(tline, "%s has joined %s", connections[connectionid]->nickname, channels[nextchannel]->name);
     tellchannelusers( tline, GREEN, nextchannel, OFF );
     listchannelusers(connectionid, 0);   
    }

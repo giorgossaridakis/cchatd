@@ -1,7 +1,7 @@
 // cchatd, multi chat server and client with ncurses
 #include "cchatd.h"
 
-const double VERSION=0.995;
+const double VERSION=0.998;
 
 int main(int argc, char *argv[])
 {
@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
    logaction(title, BASIC);
    if ( argc > 1 ) {
     if ( argc == 3 )
-     outconnections[CONSOLEID].fd=clientsocket(argv[1], argv[2]);
+     outconnections[CONSOLEID]->fd=clientsocket(argv[1], argv[2]);
     else
      writeterminal("usage: cchatd <server> port", RED);
    }
@@ -60,20 +60,20 @@ int main(int argc, char *argv[])
     select(fd_hwm + 1, &read_set, NULL, NULL, &timeout); // last argument timeout value
    
     // read outbound sockets
-    for (i=0;i<MAXCHANNELS;i++) {
-     if ( outconnections[i].fd > -1 ) {
-      if ( (nread=recv(outconnections[i].fd, clientbuffer, MAXBUFFER, 0)) > 0 ) {
+    for (i=0;i<nchannels;i++) {
+     if ( outconnections[i]->fd > -1 ) {
+      if ( (nread=recv(outconnections[i]->fd, clientbuffer, MAXBUFFER, 0)) > 0 ) {
        for (i1=0;i1<MAXLINES;i1++)
-        memset(outconnections[i].bufferlines[i1], 0, MAXBUFFER/2);
-       outconnections[i].nbuffers=stringformattersplitter(clientbuffer, outconnections[i].bufferlines);
-       for (i1=0;i1<outconnections[i].nbuffers;i1++) {
-        if ( connections[CONSOLEID].channel == i ) {
-         writeterminal(outconnections[i].bufferlines[i1], WHITE);
+        memset(outconnections[i]->bufferlines[i1], 0, MAXBUFFER/2);
+       outconnections[i]->nbuffers=stringformattersplitter(clientbuffer, outconnections[i]->bufferlines);
+       for (i1=0;i1<outconnections[i]->nbuffers;i1++) {
+        if ( connections[CONSOLEID]->channel == i ) {
+         writeterminal(outconnections[i]->bufferlines[i1], WHITE);
         }
-        if ( outconnections[i].pipe == ON )
-         tellchannelusers(outconnections[i].bufferlines[i1], WHITE, i, ON);
-        strcat(outconnections[i].bufferlines[i1], "\r\n");
-        logoutconnectionaction(outconnections[i].bufferlines[i1], FULL);
+        if ( outconnections[i]->pipe == ON )
+         tellchannelusers(outconnections[i]->bufferlines[i1], WHITE, i, ON);
+        strcat(outconnections[i]->bufferlines[i1], "\r\n");
+        logoutconnectionaction(outconnections[i]->bufferlines[i1], FULL);
        }
        if ( terminalnl == OFF ) {
         screen.x=screen.bx; --screen.y; // backup one row
@@ -98,24 +98,24 @@ int main(int argc, char *argv[])
      if ( (fdcommands(buf, CONSOLEID) > 0) )
       continue;
      if ( comms == 1 ) // telnet client only
-      strcpy(connections[CONSOLEID].buffer, buf);
+      strcpy(connections[CONSOLEID]->buffer, buf);
      else
-      snprintf(connections[CONSOLEID].buffer, MAXBUFFER, "[ %s ] %s", (connections[0].active == HIDDEN) ?  HIDDENNAME : connections[0].nickname, buf);
+      snprintf(connections[CONSOLEID]->buffer, MAXBUFFER, "[ %s ] %s", (connections[0]->active == HIDDEN) ?  HIDDENNAME : connections[0]->nickname, buf);
      strcat(buf, "\r\n");
      logaction(buf, FULL); 
-     if ( outconnections[connections[CONSOLEID].channel].fd > -1 ) {
-      write( outconnections[connections[CONSOLEID].channel].fd, buf, strlen(buf) );
+     if ( outconnections[connections[CONSOLEID]->channel]->fd > -1 ) {
+      write( outconnections[connections[CONSOLEID]->channel]->fd, buf, strlen(buf) );
      }
      if ( !strcmp(buf, "\r\n") )
       continue;  // skip empty line from here
-     if ( outconnections[connections[CONSOLEID].channel].fd > -1 )
+     if ( outconnections[connections[CONSOLEID]->channel]->fd > -1 )
       writeterminal(buf, YELLOW);
      else
-      writeterminal(connections[CONSOLEID].buffer, YELLOW);
+      writeterminal(connections[CONSOLEID]->buffer, YELLOW);
      // write to all open connections
-     for (i=1;i<MAXCONNECTIONS;i++) { // 0 is reserved for console
-      if ( connections[i].active && connections[i].active != DEADLINK && connections[i].channel == connections[CONSOLEID].channel ) {
-       telluser(i, connections[CONSOLEID].buffer, WHITE);
+     for (i=1;i<nconnections;i++) { // 0 is reserved for console
+      if ( connections[i]->active && connections[i]->active != DEADLINK && connections[i]->channel == connections[CONSOLEID]->channel ) {
+       telluser(i, connections[CONSOLEID]->buffer, WHITE);
       }
      }
     memset(buf, 0, MAXBUFFER/2);
@@ -132,27 +132,27 @@ int main(int argc, char *argv[])
       else {
        if ( (whoisonfd=whoisfd(fd)) == -1 )
         continue;
-       memset( connections[whoisonfd].buffer, 0, CONNECTIONBUFFER );
+       memset( connections[whoisonfd]->buffer, 0, CONNECTIONBUFFER );
        memset( buf, 0, MAXBUFFER/2 );
        nread = read( fd, buf, MAXBUFFER/2 );
-       if ( nread == 0 ) {
+       if ( nread == 0  || nread == - 1 ) {
         disconnect(fd);
        }
-       if ( nread ) {
+       if ( nread > 0 ) {
         nbufflines=stringformattersplitter(buf, bufflines);
         for (i2=0;i2<nbufflines;i2++) {
          if ( (fdcommands(bufflines[i2], whoisonfd) > 0) )
           continue;
          // send to outbound socket, if any
-         if ( outconnections[connections[whoisonfd].channel].pipe == ON && outconnections[connections[whoisonfd].channel].fd > - 1 )
-          send(outconnections[connections[whoisonfd].channel].fd, buf, strlen(buf), MSG_NOSIGNAL);         
-         snprintf(connections[whoisonfd].buffer, CONNECTIONBUFFER, "[ %s ] %s\r\n", (connections[whoisonfd].active == HIDDEN) ?  HIDDENNAME : connections[whoisonfd].nickname, bufflines[i2]);
-         if ( connections[whoisonfd].channel == connections[0].channel )
-          writeterminal(connections[whoisonfd].buffer, WHITE);
-         logaction(connections[whoisonfd].buffer, FULL);
-         for (i1=1;i1<MAXCONNECTIONS;i1++) { // 0 is reserved for console
-          if ( connections[i1].active == ON && whoisonfd != i1 && connections[whoisonfd].channel == connections[i1].channel ) {
-           write( connections[i1].fd, connections[whoisonfd].buffer, strlen(connections[whoisonfd].buffer) );
+         if ( outconnections[connections[whoisonfd]->channel]->pipe == ON && outconnections[connections[whoisonfd]->channel]->fd > - 1 )
+          send(outconnections[connections[whoisonfd]->channel]->fd, buf, strlen(buf), MSG_NOSIGNAL);         
+         snprintf(connections[whoisonfd]->buffer, CONNECTIONBUFFER, "[ %s ] %s\r\n", (connections[whoisonfd]->active == HIDDEN) ?  HIDDENNAME : connections[whoisonfd]->nickname, bufflines[i2]);
+         if ( connections[whoisonfd]->channel == connections[0]->channel )
+          writeterminal(connections[whoisonfd]->buffer, WHITE);
+         logaction(connections[whoisonfd]->buffer, FULL);
+         for (i1=1;i1<nconnections;i1++) { // 0 is reserved for console
+          if ( connections[i1]->active == ON && whoisonfd != i1 && connections[whoisonfd]->channel == connections[i1]->channel ) {
+           write( connections[i1]->fd, connections[whoisonfd]->buffer, strlen(connections[whoisonfd]->buffer) );
           }
          }
         }
@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
          screen.x=screen.bx; --screen.y; // backup one row
         }
         memset(buf, 0, MAXBUFFER/2);
-        memset(connections[whoisonfd].buffer, 0, CONNECTIONBUFFER);
+        memset(connections[whoisonfd]->buffer, 0, CONNECTIONBUFFER);
        }
       }
      }
@@ -179,35 +179,29 @@ void initvariables()
  
     serveraddress=ipaddress();
     serverport=SERVERPORT;
-    // prepare connections
-    for (i=1;i<MAXCONNECTIONS;i++) {
-     connections[i].active=OFF;
-     connections[i].fd=-1;
-    }
-    connections[0].fd=STDOUT_FILENO;
-    connections[0].active=ON;
+    // prepare connection
+    connections[nconnections++]=nextconnection();
+    if ( connections[nconnections-1] == 0 )
+     endcchatd();
+    connections[0]->fd=STDOUT_FILENO;
+    connections[0]->active=ON;
     // console
-    strcpy( connections[0].ipaddress, serveraddress );
-    connections[0].port=serverport;
-    strcpy( connections[0].nickname, CONSOLE );
-    strcpy( connections[0].date, datetimenow() );
-    connections[0].operator=ON;
-    connections[0].channel=OFF;
-    connections[0].invitation=OFF;
-    connections[0].active=ON;
+    strcpy( connections[0]->ipaddress, serveraddress );
+    connections[0]->port=serverport;
+    strcpy( connections[0]->nickname, CONSOLE );
+    strcpy( connections[0]->date, datetimenow() );
+    connections[0]->operator=ON;
+    connections[0]->channel=OFF;
+    connections[0]->invitation=OFF;
+    connections[0]->active=ON;
   
-    // channels
-    for (i=0;i<MAXCHANNELS;i++) {
-     channels[i].active=OFF;
-     channels[i].locked=OFF;
-     sprintf( channels[i].name, "%d", i ); 
-     outconnections[i].fd=-1;
-     outconnections[i].pipe=OFF;
-    }
     // channel zero
-    strcpy( channels[0].name, MAINHALL );
-    strcpy( channels[0].topic, MAINHALLTOPIC );
-    channels[CONSOLEID].active=ON;
+    channels[nchannels++]=nextchannel();
+    if ( channels[nchannels-1] == 0 )
+     endcchatd();
+    strcpy( channels[0]->name, MAINHALL );
+    strcpy( channels[0]->topic, MAINHALLTOPIC );
+    channels[CONSOLEID]->active=ON;
   
     // screen
      myrow=24; mycol=1; screen.x=1; screen.y=2;
@@ -230,6 +224,37 @@ void initvariables()
      if ( (i=atoi(tport)) < 1000 )
       return;
      serverport=i;
+}
+
+// return new connection
+Connection* nextconnection()
+{
+  Connection* tconnection=malloc(sizeof (Connection) );
+  if ( tconnection == 0 )
+   return NULL;
+  tconnection->active=OFF;
+  tconnection->fd=-1;
+  
+ return tconnection;
+}
+
+// return new channel
+Channel* nextchannel()
+{
+  Channel* tchannel=malloc(sizeof (Channel) );
+  if ( tchannel == 0 )
+   return NULL;
+  tchannel->active=OFF;
+  tchannel->locked=OFF;
+  sprintf( tchannel->name, "%d", nchannels );
+  OutConnection* toutconnection=malloc(sizeof (OutConnection) );
+  if ( toutconnection == 0 )
+   return NULL;
+  toutconnection->fd=-1;
+  toutconnection->pipe=OFF;
+  outconnections[noutconnections++]=toutconnection;
+  
+ return tchannel;
 }
 
 // read ncurses keyboard
@@ -269,38 +294,46 @@ int readkeyboard(WINDOW *twin)
      // handle control keys
      if ( c == TAB ) { // next channel
       if ( comms == 1 ) {
-       if ( connections[CONSOLEID].channel < MAXCHANNELS - 2 )
-        channels[connections[CONSOLEID].channel + 1].active=ON;
-       if ( connections[CONSOLEID].channel != CONSOLEID && outconnections[connections[CONSOLEID].channel].fd == -1 )
-        channels[connections[CONSOLEID].channel].active=OFF;
+       if ( connections[CONSOLEID]->channel < MAXCHANNELS - 2 ) {
+        if ( channels[connections[CONSOLEID]->channel + 1] == 0 ) {
+         channels[nchannels++]=nextchannel();
+         if ( channels[nchannels-1] == 0 ) {
+          --nchannels;
+          return 0;
+         }
+        }
+        channels[connections[CONSOLEID]->channel + 1]->active=ON;
+       }
+       if ( connections[CONSOLEID]->channel != CONSOLEID && outconnections[connections[CONSOLEID]->channel]->fd == -1 )
+        channels[connections[CONSOLEID]->channel]->active=OFF;
       }
-      for (i=(connections[CONSOLEID].channel < MAXCHANNELS-2) ? connections[CONSOLEID].channel+1 : CONSOLEID;i!=connections[CONSOLEID].channel;i++) {
-       if ( i == MAXCHANNELS )
+      for (i=(connections[CONSOLEID]->channel < nchannels - 1) ? connections[CONSOLEID]->channel + 1 : CONSOLEID;i!=connections[CONSOLEID]->channel;i++) {
+       if ( i == nchannels )
         i=CONSOLEID;
-       if ( channels[i].active == ON )
+       if ( channels[i]->active == ON )
         break;
       }
-      if ( i != connections[CONSOLEID].channel ) {
+      if ( i != connections[CONSOLEID]->channel ) {
        joinchannel(CONSOLEID, i);
        return 0;
       }
      }
      if ( c == SHIFT_TAB ) { // previous channel
-      if ( comms == 1 ) { 
-       if ( connections[CONSOLEID].channel > CONSOLEID + 1 )
-        channels[connections[CONSOLEID].channel - 1].active=ON;
-       if ( connections[CONSOLEID].channel == CONSOLEID )
-        channels[MAXCHANNELS-1].active=ON;
-       if ( connections[CONSOLEID].channel != CONSOLEID && outconnections[connections[CONSOLEID].channel].fd == -1 )
-        channels[connections[CONSOLEID].channel].active=OFF;
+      if ( comms == 1 ) {
+       if ( connections[CONSOLEID]->channel > CONSOLEID + 1 )
+        channels[connections[CONSOLEID]->channel - 1]->active=ON;
+       if ( connections[CONSOLEID]->channel == CONSOLEID )
+        channels[nchannels-1]->active=ON;
+       if ( connections[CONSOLEID]->channel != CONSOLEID && outconnections[connections[CONSOLEID]->channel]->fd == -1 )
+        channels[connections[CONSOLEID]->channel]->active=OFF;
       }
-      for (i=(connections[CONSOLEID].channel > CONSOLEID) ? connections[CONSOLEID].channel-1 : MAXCHANNELS-1;i!=connections[CONSOLEID].channel;i--) {
+      for (i=(connections[CONSOLEID]->channel > CONSOLEID) ? connections[CONSOLEID]->channel-1 : nchannels-1;i!=connections[CONSOLEID]->channel;i--) {
        if ( i == -1 )
-        i=MAXCHANNELS-1;
-       if ( channels[i].active == ON )
+        i=nchannels-1;
+       if ( channels[i]->active == ON )
         break;
       }
-      if ( i != connections[CONSOLEID].channel ) {
+      if ( i != connections[CONSOLEID]->channel ) {
        joinchannel(CONSOLEID, i);
        return 0;
       }
@@ -464,7 +497,7 @@ void outputtextfile(int connectionid, char *filename)
   char *line = NULL;
   size_t len = 0;
   ssize_t nread;
-  if ( connections[connectionid].active == OFF || connections[connectionid].active == DEADLINK )
+  if ( connections[connectionid]->active == OFF || connections[connectionid]->active == DEADLINK )
    return;
   
      stream = fopen(filename, "r");
@@ -475,8 +508,8 @@ void outputtextfile(int connectionid, char *filename)
       if ( connectionid == 0 )
        writeterminal(line, WHITE);
       else
-       write( connections[connectionid].fd, line, strlen(line) );
-//        send ( connections[connectionid].fd, line, nread, MSG_NOSIGNAL );
+       write( connections[connectionid]->fd, line, strlen(line) );
+//        send ( connections[connectionid]->fd, line, nread, MSG_NOSIGNAL );
       memset(line, 0, nread);
      }
     
@@ -492,14 +525,14 @@ void endcchatd()
   sprintf(tline, "cchatd %s is closing down", ( comms == 0 ) ? "server" : "client");
   announce(tline, GREEN);
   logaction("cchatd closing", BASIC);
-  for (i=1;i<MAXCONNECTIONS;i++) { // 0 is console
-   if ( connections[i].active ) {
-    disconnect(connections[i].fd);
+  for (i=1;i<nconnections;i++) { // 0 is console
+   if ( connections[i]->active ) {
+    disconnect(connections[i]->fd);
    }
   }
-  for (i=0;i<MAXCHANNELS;i++) {
-   if ( outconnections[i].fd > -1 ) {
-    close(outconnections[i].fd);
+  for (i=0;i<nchannels;i++) {
+   if ( outconnections[i]->fd > -1 ) {
+    close(outconnections[i]->fd);
    }
   }
    

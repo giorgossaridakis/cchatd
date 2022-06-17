@@ -182,7 +182,7 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
     if ( connections[connectionid]->operator == ON )
      strcat(tline, ", hide, announce <message>, kick <nick>, op <nick>");
     if ( connectionid == CONSOLEID) 
-     strcat(tline, ", deop <nick>, ban <nick>, read <filename>, log <level>, open <server> <port>, close, pipe, mute [ console keys TAB, SHIFT_TAB, UP, DOWN, PG_UP, PG_DOWN ]");
+     strcat(tline, ", deop <nick>, ban <nick>, read <target nickname|all> <filename>, log <level>, open <server> <port>, close, pipe, mute [ console keys TAB, SHIFT_TAB, UP, DOWN, PG_UP, PG_DOWN ]");
     strcat(tline, "");
     telluser(connectionid, tline, YELLOW);
    }

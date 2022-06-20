@@ -1,13 +1,13 @@
 // cchatd, multi chat server and client with ncurses
 #include "cchatd.h"
 
-const double VERSION=0.998;
+const double VERSION=1.000;
 
 int main(int argc, char *argv[])
 {
   int i, i1, i2, fd, c, nbufflines, whoisonfd;
 
-  char bufflines[MAXLINES][MAXBUFFER/2];
+  char bufflines[MAXLINES][MAXBUFFER/2], tbuf[MAXBUFFER];
   struct timeval timeout;
   // initialize the timeout data structure
   timeout.tv_sec = 0;
@@ -102,7 +102,8 @@ int main(int argc, char *argv[])
      else
       snprintf(connections[CONSOLEID]->buffer, MAXBUFFER, "[ %s ] %s", (connections[0]->active == HIDDEN) ?  HIDDENNAME : connections[0]->nickname, buf);
      strcat(buf, "\r\n");
-     logaction(buf, FULL); 
+     sprintf(tbuf, "[%s] {%s} %s", connections[CONSOLEID]->nickname, channels[connections[CONSOLEID]->channel]->name, buf);
+     logaction(tbuf, FULL); 
      if ( outconnections[connections[CONSOLEID]->channel]->fd > -1 ) {
       write( outconnections[connections[CONSOLEID]->channel]->fd, buf, strlen(buf) );
      }
@@ -135,7 +136,7 @@ int main(int argc, char *argv[])
        memset( connections[whoisonfd]->buffer, 0, CONNECTIONBUFFER );
        memset( buf, 0, MAXBUFFER/2 );
        nread = read( fd, buf, MAXBUFFER/2 );
-       if ( nread == 0  || nread == - 1 ) {
+       if ( nread == 0 ) {
         disconnect(fd);
        }
        if ( nread > 0 ) {
@@ -149,7 +150,8 @@ int main(int argc, char *argv[])
          snprintf(connections[whoisonfd]->buffer, CONNECTIONBUFFER, "[ %s ] %s\r\n", (connections[whoisonfd]->active == HIDDEN) ?  HIDDENNAME : connections[whoisonfd]->nickname, bufflines[i2]);
          if ( connections[whoisonfd]->channel == connections[0]->channel )
           writeterminal(connections[whoisonfd]->buffer, WHITE);
-         logaction(connections[whoisonfd]->buffer, FULL);
+         sprintf(tbuf, "[%s] {%s} %s", connections[whoisonfd]->nickname, channels[connections[whoisonfd]->channel]->name, buf);
+         logaction(tbuf, FULL); 
          for (i1=1;i1<nconnections;i1++) { // 0 is reserved for console
           if ( connections[i1]->active == ON && whoisonfd != i1 && connections[whoisonfd]->channel == connections[i1]->channel ) {
            write( connections[i1]->fd, connections[whoisonfd]->buffer, strlen(connections[whoisonfd]->buffer) );
@@ -166,6 +168,7 @@ int main(int argc, char *argv[])
      }
     }
     announcedisconnectedusers();
+    usleep(125); // CPU rest 
    
    }
 
@@ -509,7 +512,6 @@ void outputtextfile(int connectionid, char *filename)
        writeterminal(line, WHITE);
       else
        write( connections[connectionid]->fd, line, strlen(line) );
-//        send ( connections[connectionid]->fd, line, nread, MSG_NOSIGNAL );
       memset(line, 0, nread);
      }
     

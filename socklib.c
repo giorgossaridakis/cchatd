@@ -34,8 +34,8 @@ enum { ANSI_BACKGROUND_BLACK = 56, ANSI_BACKGROUND_RED, ANSI_BACKGROUND_GREEN, A
 enum { BLACKBACKGROUND = 56, REDBACKGROUMD, GREENBACKGROUND, YELLOWBACKGROUMD, BLUEBACKGROUND, MAGENTABACKGROUND, CYANBACKGROUND, WHITEBACKGROUND };
 #define OLDCLASSRESET 88
 enum { CRESET = 90, BOLDON, UNDERLINEON, BLINKON, REVERSEON, HIDDENON };
-char *BANNEDMESSAGE="you have been banned from this system!\r\n";
-enum { DEADLINK = -2, HIDDEN = -1, OFF = 0, ON }; // for .active members
+char *BANNEDMESSAGE="you have been banned from this system!";
+enum { BANNED = -3, DEADLINK, HIDDEN, OFF = 0, ON }; // for .active members
 extern const char *STATES[];
 enum { NONE = 1, BASIC, INCREASED, FULL }; // log levels
 extern const char *LOGLEVELS[];
@@ -169,6 +169,7 @@ int addconnection()
     while ( i1 != -1 && (readfileentry(i1, tline)) ) {
      if ( !strcmp(tline, inet_ntoa(sa2.sin_addr)) ) {
       telluser(whoisfd(fd_client), BANNEDMESSAGE, RED);
+      connections[i]->active=BANNED;
       disconnect(fd_client);
       snprintf( tline, MAXBUFFER, "banned ip [ %s ] tried to connect\r\n", inet_ntoa(sa2.sin_addr) );
       logaction(tline, BASIC);
@@ -207,7 +208,8 @@ void disconnect(int fd)
       
       if ( muteserver == ON )
        return;
-      connections[i]->active=DEADLINK;
+      if ( connections[i]->active == ON )
+       connections[i]->active=DEADLINK;
       connections[i]->fd=-1;
 }
 
@@ -218,10 +220,11 @@ void announcedisconnectedusers()
   char tline[MAXBUFFER];
   
    for (i=0;i<nconnections;i++) {
-    if ( connections[i]->active == DEADLINK ) {
+    if ( connections[i]->active == DEADLINK || connections[i]->active == BANNED ) {
      sprintf(tline, "[ %s ] from %s port %d has disconnected", connections[i]->nickname, connections[i]->ipaddress, connections[i]->port);
      logaction(tline, BASIC);
-     tellchannelusers( tline, GREEN, connections[i]->channel, OFF );
+     if ( connections[i]->active != BANNED )
+      tellchannelusers( tline, GREEN, connections[i]->channel, OFF );
      connections[i]->active=OFF;
      tfd=-1;
     }

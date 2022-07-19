@@ -156,6 +156,7 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
 {
   int i, i1, i2;
   char tline[MAXBUFFER], title[MAXNAME];
+  FILE *out;
   enum { HELP=0, NICK, WHO, MSG, LIST, JOIN, LEAVE, INVITE, TOPIC, LOCK, UNLOCK, REPORT, NAMES, QUIT, HIDE, ANNOUNCE, KICK, OP, DEOP, BAN, READ, LOG, OPEN, CLOSE, PIPE, MUTESERVER };
   char *COMMANDS[] = { "help", "nick", "who", "msg", "list", "join", "leave", "invite", "topic", "lock", "unlock", "report", "names", "quit", "hide", "announce", "kick", "op", "deop", "ban", "read", "log" , "open", "close", "pipe", "mute" };
   
@@ -227,17 +228,17 @@ ui parsecommand(char words[MAXWORDS][MAXBUFFER/2], char bwords[MAXWORDS][MAXBUFF
     announce(tline, CYAN);
    }
    if ( i == BAN ) {
-    if ( (i1=open(BANNEDFILE, O_WRONLY| O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR))==-1 ) {
-     telluser(connectionid, "file io error", RED);
-     return 0;
-    }
     if ( nwords != 2 || (i2=whoisnick(words[1]))==-1 || (i2==CONSOLEID) ) {
      telluser(connectionid, "<ban> nickname", RED);
      return 0;
     }
-    write(i1, connections[i2]->ipaddress, strlen(connections[i2]->ipaddress) );
-    write(i1, "\n", 1);
-    close(i1);
+    out=fopen(BANNEDFILE, "a");
+    if ( out == 0 ) {
+     telluser(connectionid, "file io error", RED);
+     return 0;
+    }
+    fprintf(out, "%s\n", connections[i2]->ipaddress );
+    fclose(out);
     kick(i2);
     sprintf(tline, "%s from %s is banned", connections[i2]->nickname, connections[i2]->ipaddress);
     telluser(connectionid, tline, RED);
